@@ -7,7 +7,6 @@ openai
 tavily-python
 wikipedia
 requests
-aisuite
 docstring_parser
 
 # Core

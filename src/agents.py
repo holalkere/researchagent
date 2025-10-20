@@ -1,19 +1,26 @@
 # -*- coding: utf-8 -*-
+import os
 from datetime import datetime
 from urllib import response
-from aisuite import Client
 from src.research_tools import (
     arxiv_search_tool,
     tavily_search_tool,
     wikipedia_search_tool,
 )
 
-client = Client()
+# Configure Azure OpenAI client
+from openai import AzureOpenAI
+
+client = AzureOpenAI(
+    api_version="2024-12-01-preview",
+    azure_endpoint="https://oai-sbd-genai-common-eastus2-dev.openai.azure.com/",
+    api_key=os.getenv("AZURE_OPENAI_KEY")
+)
 
 
 # === Research Agent ===
 def research_agent(
-    prompt: str, model: str = "openai:gpt-4.1-mini", return_messages: bool = False
+    prompt: str, model: str = "azure:gpt-4", return_messages: bool = False
 ):
     print("==================================")
     print("Research Agent")
@@ -78,71 +85,160 @@ USER RESEARCH REQUEST:
 """.strip()
 
     messages = [{"role": "user", "content": full_prompt}]
-    tools = [arxiv_search_tool, tavily_search_tool, wikipedia_search_tool]
+    
+    # Define tools in OpenAI format
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "arxiv_search_tool",
+                "description": "Search arXiv and return results with summary containing extracted PDF text",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "The search query for arXiv"
+                        },
+                        "max_results": {
+                            "type": "integer",
+                            "description": "Maximum number of results to return",
+                            "default": 3
+                        }
+                    },
+                    "required": ["query"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "tavily_search_tool",
+                "description": "Perform a search using the Tavily API",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "The search query"
+                        },
+                        "max_results": {
+                            "type": "integer",
+                            "description": "Number of results to return",
+                            "default": 10
+                        },
+                        "include_images": {
+                            "type": "boolean",
+                            "description": "Whether to include image results",
+                            "default": False
+                        }
+                    },
+                    "required": ["query"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "wikipedia_search_tool",
+                "description": "Search Wikipedia for a summary of the given query",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query for Wikipedia"
+                        },
+                        "sentences": {
+                            "type": "integer",
+                            "description": "Number of sentences to include in the summary",
+                            "default": 5
+                        }
+                    },
+                    "required": ["query"]
+                }
+            }
+        }
+    ]
 
     try:
         resp = client.chat.completions.create(
-            model=model,
+            model=os.getenv("AZURE_OPENAI_DEPLOYMENT", "sbd-gpt-4.1-mini"),
             messages=messages,
             tools=tools,
             tool_choice="auto",
-            max_turns=5,
             temperature=0.0,  # Use deterministic output
         )
 
         content = resp.choices[0].message.content or ""
 
-        # ---- Collect tool calls from intermediate_responses and intermediate_messages
-        calls = []
+        # ---- Execute tool calls from the response
+        tool_results = []
+        
+        # Get tool calls from the response message
+        if hasattr(resp.choices[0].message, "tool_calls") and resp.choices[0].message.tool_calls:
+            for tc in resp.choices[0].message.tool_calls:
+                tool_name = tc.function.name
+                tool_args = tc.function.arguments
+                
+                try:
+                    # Parse arguments
+                    import json
+                    args_dict = json.loads(tool_args) if isinstance(tool_args, str) else tool_args
+                    
+                    # Execute the appropriate tool
+                    if tool_name == "arxiv_search_tool":
+                        result = arxiv_search_tool(**args_dict)
+                    elif tool_name == "tavily_search_tool":
+                        result = tavily_search_tool(**args_dict)
+                    elif tool_name == "wikipedia_search_tool":
+                        result = wikipedia_search_tool(**args_dict)
+                    else:
+                        result = f"Unknown tool: {tool_name}"
+                    
+                    tool_results.append({
+                        "tool_name": tool_name,
+                        "args": args_dict,
+                        "result": result
+                    })
+                    
+                except Exception as e:
+                    tool_results.append({
+                        "tool_name": tool_name,
+                        "args": tool_args,
+                        "result": f"Error executing {tool_name}: {str(e)}"
+                    })
 
-        # A) From intermediate_responses
-        for ir in getattr(resp, "intermediate_responses", []) or []:
-            try:
-                tcs = ir.choices[0].message.tool_calls or []
-                for tc in tcs:
-                    calls.append((tc.function.name, tc.function.arguments))
-            except Exception:
-                pass
-
-        # B) From intermediate_messages on the final message
-        for msg in getattr(resp.choices[0].message, "intermediate_messages", []) or []:
-            # assistant message with tool_calls
-            if hasattr(msg, "tool_calls") and msg.tool_calls:
-                for tc in msg.tool_calls:
-                    calls.append((tc.function.name, tc.function.arguments))
-
-        # Dedup while preserving order
-        seen = set()
-        dedup_calls = []
-        for name, args in calls:
-            key = (name, args)
-            if key not in seen:
-                seen.add(key)
-                dedup_calls.append((name, args))
-
-        # Pretty print args: JSON->dict if possible
-        tool_lines = []
-        for name, args in dedup_calls:
-            arg_text = str(args)
-            try:
-                import json as _json
-
-                parsed = _json.loads(args) if isinstance(args, str) else args
-                if isinstance(parsed, dict):
-                    kv = ", ".join(f"{k}={repr(v)}" for k, v in parsed.items())
-                    arg_text = kv
-            except Exception:
-                # keep raw string if not JSON
-                pass
-            tool_lines.append(f"- {name}({arg_text})")
-
-        if tool_lines:
-            tools_html = (
-                "<h2 style='font-size:1.5em; color:#2563eb;'>Tools used</h2>"
-            )
-            tools_html += (
-                "<ul>" + "".join(f"<li>{line}</li>" for line in tool_lines) + "</ul>"
-            )
+        # Add tool results to content
+        if tool_results:
+            tools_html = "<h2 style='font-size:1.5em; color:#2563eb;'>Research Results</h2>"
+            for tr in tool_results:
+                # Make Tavily results more prominent
+                if tr['tool_name'] == 'tavily_search_tool':
+                    tools_html += f"<h3 style='color:#1e40af; background:#e0f2fe; padding:8px; border-radius:5px;'>🌐 {tr['tool_name'].replace('_', ' ').title()} - Web Search Results</h3>"
+                else:
+                    tools_html += f"<h3 style='color:#1e40af;'>{tr['tool_name'].replace('_', ' ').title()}</h3>"
+                
+                tools_html += f"<p style='color:#000000;'><strong>Query:</strong> {tr['args']}</p>"
+                
+                # Format Tavily results better
+                if tr['tool_name'] == 'tavily_search_tool' and isinstance(tr['result'], list):
+                    tools_html += "<div style='background:#f0f9ff; padding:15px; border-radius:8px; border-left:4px solid #0ea5e9;'>"
+                    for i, result in enumerate(tr['result'][:5], 1):  # Show first 5 results
+                        if isinstance(result, dict) and 'title' in result:
+                            tools_html += f"""
+                            <div style='margin-bottom:12px; padding:10px; background:white; border-radius:5px; border:1px solid #e0f2fe; color:#000000;'>
+                                <h4 style='color:#0369a1; margin:0 0 5px 0;'>{i}. {result.get('title', 'No title')}</h4>
+                                <p style='margin:5px 0; color:#000000; font-size:0.9em;'>{result.get('content', 'No content')[:200]}{'...' if len(result.get('content', '')) > 200 else ''}</p>
+                                <a href='{result.get('url', '#')}' target='_blank' style='color:#0ea5e9; text-decoration:none; font-size:0.8em;'>🔗 View Source</a>
+                            </div>
+                            """
+                    tools_html += "</div>"
+                else:
+                    tools_html += f"<div style='background:#f8fafc; padding:10px; border-radius:5px; color:#000000;'>"
+                    tools_html += f"<pre style='color:#000000;'>{str(tr['result'])[:1000]}{'...' if len(str(tr['result'])) > 1000 else ''}</pre>"
+                    tools_html += "</div>"
+                tools_html += "<br>"
             content += "\n\n" + tools_html
 
         print("SUCCESS Output:\n", content)
@@ -155,7 +251,7 @@ USER RESEARCH REQUEST:
 
 def writer_agent(
     prompt: str,
-    model: str = "openai:gpt-4.1-mini",
+    model: str = "azure:gpt-4",
     min_words_total: int = 2400,
     min_words_per_section: int = 400,
     max_tokens: int = 15000,
@@ -176,14 +272,15 @@ You are an expert academic writer with a PhD-level understanding of scholarly co
 
 ## MANDATORY STRUCTURE:
 1. **Title**: Clear, concise, and descriptive of the content
-2. **Abstract**: Brief summary (100-150 words) of the report's purpose, methods, and key findings
-3. **Introduction**: Present the topic, research question/problem, significance, and outline of the report
-4. **Background/Literature Review**: Contextualize the topic within existing scholarship
-5. **Methodology**: If applicable, describe research methods, data collection, and analytical approaches
-6. **Key Findings/Results**: Present the primary outcomes and evidence
-7. **Discussion**: Interpret findings, address implications, limitations, and connections to broader field
-8. **Conclusion**: Synthesize main points and suggest directions for future research
-9. **References**: Complete list of all cited works
+2. **User Prompt**: Display the original research question/prompt that initiated this report
+3. **Abstract**: Brief summary (100-150 words) of the report's purpose, methods, and key findings
+4. **Introduction**: Present the topic, research question/problem, significance, and outline of the report
+5. **Background/Literature Review**: Contextualize the topic within existing scholarship
+6. **Methodology**: If applicable, describe research methods, data collection, and analytical approaches
+7. **Key Findings/Results**: Present the primary outcomes and evidence
+8. **Discussion**: Interpret findings, address implications, limitations, and connections to broader field
+9. **Conclusion**: Synthesize main points and suggest directions for future research
+10. **References**: Complete list of all cited works
 
 ## ACADEMIC WRITING GUIDELINES:
 - Maintain formal, precise, and objective language throughout
@@ -221,14 +318,23 @@ INTERNAL CHECKLIST (DO NOT INCLUDE IN OUTPUT):
 - [ ] Preserved all source URLs and bibliographic information
 """.strip()
 
+    # Extract the original user prompt from the context
+    original_prompt = extract_original_prompt_from_context(prompt)
+    
+    enhanced_prompt = f"""
+{prompt}
+
+IMPORTANT: In your report, make sure to include a "User Prompt" section right after the title that displays the original research question: "{original_prompt}"
+"""
+    
     messages = [
         {"role": "system", "content": system_message},
-        {"role": "user", "content": prompt},
+        {"role": "user", "content": enhanced_prompt},
     ]
 
     def _call(messages_):
         resp = client.chat.completions.create(
-            model=model,
+            model=os.getenv("AZURE_OPENAI_DEPLOYMENT", "sbd-gpt-4.1-mini"),
             messages=messages_,
             temperature=0,
             max_tokens=max_tokens,
@@ -249,7 +355,7 @@ INTERNAL CHECKLIST (DO NOT INCLUDE IN OUTPUT):
 
 def editor_agent(
     prompt: str,
-    model: str = "openai:gpt-4.1-mini",
+    model: str = "azure:gpt-4",
     target_min_words: int = 2400,
 ):
     print("==================================")
@@ -289,9 +395,236 @@ Return only the revised, polished text in Markdown format without explanatory co
     ]
 
     response = client.chat.completions.create(
-        model=model, messages=messages, temperature=0
+        model=os.getenv("AZURE_OPENAI_DEPLOYMENT", "sbd-gpt-4.1-mini"), 
+        messages=messages, 
+        temperature=0
     )
 
     content = response.choices[0].message.content
     print("SUCCESS Output:\n", content)
     return content, messages
+
+
+# === Parallel Writer Agent ===
+import concurrent.futures
+from typing import Dict, List
+
+def parallel_writer_agent(
+    prompt: str,
+    model: str = "azure:gpt-4",
+    max_workers: int = 4
+) -> tuple[str, list]:
+    """
+    Parallel implementation that splits report generation into concurrent section tasks
+    """
+    print("==================================")
+    print("Parallel Writer Agent")
+    print("==================================")
+    
+    # Extract research data from prompt context
+    research_data = extract_research_from_prompt(prompt)
+    
+    # Define report sections that can be written in parallel
+    sections = [
+        {"name": "abstract", "title": "Abstract", "description": "Brief summary (100-150 words) of the report's purpose, methods, and key findings"},
+        {"name": "introduction", "title": "Introduction", "description": "Present the topic, research question/problem, significance, and outline"},
+        {"name": "background", "title": "Background/Literature Review", "description": "Contextualize the topic within existing scholarship"},
+        {"name": "methodology", "title": "Methodology", "description": "Describe research methods, data collection, and analytical approaches"},
+        {"name": "findings", "title": "Key Findings/Results", "description": "Present the primary outcomes and evidence"},
+        {"name": "discussion", "title": "Discussion", "description": "Interpret findings, address implications, limitations, and connections"},
+        {"name": "conclusion", "title": "Conclusion", "description": "Synthesize main points and suggest directions for future research"}
+    ]
+    
+    # Create parallel tasks for each section
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Submit all section writing tasks
+        future_to_section = {
+            executor.submit(write_section_parallel, section, prompt, research_data, model): section
+            for section in sections
+        }
+        
+        # Collect results as they complete
+        section_results = {}
+        for future in concurrent.futures.as_completed(future_to_section):
+            section = future_to_section[future]
+            try:
+                content = future.result()
+                section_results[section["name"]] = content
+                print(f"✅ Completed {section['title']} section")
+            except Exception as e:
+                print(f"❌ Error writing {section['name']}: {e}")
+                section_results[section["name"]] = f"Error generating {section['title']}"
+    
+    # Assemble final report
+    final_report = assemble_report_parallel(section_results, research_data, prompt)
+    
+    print("SUCCESS Output:\n", final_report)
+    return final_report, []
+
+def write_section_parallel(section: Dict, prompt: str, research_data: str, model: str) -> str:
+    """Write a single section of the report in parallel"""
+    
+    system_message = f"""
+    You are an expert academic writer. Write ONLY the {section['title']} section of an academic report.
+    
+    Section Requirements:
+    - {section['description']}
+    - Use the provided research data to support your content
+    - Include proper citations [1], [2], etc. where appropriate
+    - Maintain academic tone and formal language
+    - Target 300-500 words for this section
+    - Output ONLY the section content, no headers or meta-commentary
+    
+    Research Data:
+    {research_data}
+    """
+    
+    messages = [
+        {"role": "system", "content": system_message},
+        {"role": "user", "content": f"Write the {section['title']} section for: {prompt}"}
+    ]
+    
+    response = client.chat.completions.create(
+        model=os.getenv("AZURE_OPENAI_DEPLOYMENT", "sbd-gpt-4.1-mini"),
+        messages=messages,
+        temperature=0,
+        max_tokens=2000
+    )
+    
+    return response.choices[0].message.content or ""
+
+def assemble_report_parallel(section_results: Dict[str, str], research_data: str, prompt: str) -> str:
+    """Assemble the parallel-written sections into a complete report"""
+    
+    # Extract title from research data or generate one
+    title = extract_title_from_research(research_data, prompt)
+    
+    # Assemble sections in order
+    report_sections = [
+        f"# {title}\n",
+        f"## User Prompt\n{prompt}\n",
+        f"## Abstract\n{section_results.get('abstract', '')}\n",
+        f"## Introduction\n{section_results.get('introduction', '')}\n", 
+        f"## Background/Literature Review\n{section_results.get('background', '')}\n",
+        f"## Methodology\n{section_results.get('methodology', '')}\n",
+        f"## Key Findings/Results\n{section_results.get('findings', '')}\n",
+        f"## Discussion\n{section_results.get('discussion', '')}\n",
+        f"## Conclusion\n{section_results.get('conclusion', '')}\n",
+        f"## References\n{extract_references_from_research(research_data)}\n"
+    ]
+    
+    return "\n".join(report_sections)
+
+def extract_research_from_prompt(prompt: str) -> str:
+    """Extract research data from the prompt context"""
+    # Look for research results in the prompt
+    if "Research Results" in prompt:
+        return prompt
+    return prompt
+
+def extract_title_from_research(research_data: str, prompt: str) -> str:
+    """Extract or generate a title from research data"""
+    # Try to extract title from research data
+    lines = research_data.split('\n')
+    for line in lines:
+        if line.strip().startswith('#') and len(line.strip()) > 1:
+            return line.strip()[1:].strip()
+    
+    # Fallback: generate title from prompt
+    return prompt.split('\n')[0].strip()[:100]
+
+def extract_references_from_research(research_data: str) -> str:
+    """Extract references from research data"""
+    # Look for URLs and sources in research data
+    import re
+    urls = re.findall(r'https?://[^\s<>"]+', research_data)
+    references = []
+    
+    for i, url in enumerate(urls[:10], 1):  # Limit to 10 references
+        references.append(f"[{i}] {url}")
+    
+    return '\n'.join(references) if references else "References will be added based on research findings."
+
+def extract_original_prompt_from_context(prompt: str) -> str:
+    """Extract the original user prompt from the enriched context"""
+    # Look for the original prompt in the context
+    lines = prompt.split('\n')
+    for line in lines:
+        if line.strip().startswith('USER RESEARCH REQUEST:') or line.strip().startswith('User Prompt:'):
+            # Find the next non-empty line which should be the actual prompt
+            for i, next_line in enumerate(lines[lines.index(line) + 1:], lines.index(line) + 1):
+                if next_line.strip():
+                    return next_line.strip()
+    
+    # If not found in structured format, try to extract from the beginning
+    # Remove common prefixes and get the first meaningful line
+    for line in lines:
+        line = line.strip()
+        if line and not line.startswith(('You are', '##', '**', 'Today is', 'USER RESEARCH REQUEST:', 'User Prompt:')):
+            return line
+    
+    # Fallback: return the first 100 characters of the prompt
+    return prompt.strip()[:100] + ('...' if len(prompt.strip()) > 100 else '')
+
+# === Analysis Agent ===
+def analysis_agent(
+    prompt: str,
+    model: str = "azure:gpt-4",
+    max_tokens: int = 4000,
+) -> tuple[str, list]:
+    """
+    Analysis agent for intermediate steps - analyzes, synthesizes, or organizes research findings
+    without generating a full report structure.
+    """
+    print("==================================")
+    print("Analysis Agent")
+    print("==================================")
+
+    system_message = """
+You are an expert research analyst specializing in synthesizing and organizing research findings. Your task is to analyze, synthesize, or organize research materials for specific analytical purposes.
+
+## YOUR ROLE:
+- Analyze research findings and identify key patterns, themes, or insights
+- Synthesize information from multiple sources into coherent analytical frameworks
+- Organize research materials by relevance, authority, or thematic categories
+- Extract and structure key information for further processing
+- Provide focused analysis without generating full report structures
+
+## ANALYSIS GUIDELINES:
+- Focus on the specific analytical task requested
+- Identify key themes, patterns, and relationships in the research
+- Synthesize findings from multiple sources
+- Organize information logically and clearly
+- Highlight important insights and connections
+- Maintain objectivity and evidence-based analysis
+
+## OUTPUT FORMAT:
+- Provide clear, structured analysis
+- Use bullet points, numbered lists, or clear sections as appropriate
+- Include relevant citations and source references
+- Focus on analysis rather than full report generation
+- Keep output concise but comprehensive for the specific task
+
+Do not generate full report structures (Title, Abstract, Introduction, etc.). Focus only on the specific analytical task requested.
+""".strip()
+
+    messages = [
+        {"role": "system", "content": system_message},
+        {"role": "user", "content": prompt},
+    ]
+
+    try:
+        resp = client.chat.completions.create(
+            model=os.getenv("AZURE_OPENAI_DEPLOYMENT", "sbd-gpt-4.1-mini"),
+            messages=messages,
+            temperature=0.3,
+            max_tokens=max_tokens,
+        )
+
+        content = resp.choices[0].message.content or ""
+        print("SUCCESS Output:\n", content)
+        return content, messages
+
+    except Exception as e:
+        print("ERROR:", e)
+        return f"[Analysis Error: {str(e)}]", messages

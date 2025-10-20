@@ -2,25 +2,771 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Reflective Research Agents with Tools Use</title>
+  <title>Deep Research Agent</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
-    .step-header { cursor: pointer; }
-    .step-running { background-color: #fff3cd; }
-    .step-done { background-color: #d1e7dd; }
-    .step-error { background-color: #f8d7da; }
-    .step-pending { background-color: #e2e3e5; }
-    .substep { font-size: 0.95em; margin-left: 1.5rem; }
-    .substep-header { cursor: pointer; font-weight: bold; }
-    .status-icon { margin-right: 0.5rem; }
-    #stepStatusList div { margin-bottom: 0.25rem; }
-    #finalReport { background-color: #fff; border: 1px solid #ccc; padding: 1rem; border-radius: 5px; }
+    /* Modern Color Scheme */
+    :root {
+      --primary: #6366f1;
+      --primary-dark: #4f46e5;
+      --primary-light: #8b5cf6;
+      --secondary: #64748b;
+      --accent: #06b6d4;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --error: #ef4444;
+      --dark: #0f172a;
+      --light: #f8fafc;
+      --white: #ffffff;
+      --gray-50: #f8fafc;
+      --gray-100: #f1f5f9;
+      --gray-200: #e2e8f0;
+      --gray-300: #cbd5e1;
+      --gray-400: #94a3b8;
+      --gray-500: #64748b;
+      --gray-600: #475569;
+      --gray-700: #334155;
+      --gray-800: #1e293b;
+      --gray-900: #0f172a;
+    }
+    
+    body {
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%);
+      font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+      position: relative;
+    }
+    
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: 
+        radial-gradient(circle at 20% 80%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(6, 182, 212, 0.05) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: -1;
+    }
+    
+    .container {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      border-radius: 24px;
+      box-shadow: 
+        0 25px 50px -12px rgba(0, 0, 0, 0.25),
+        0 0 0 1px rgba(255, 255, 255, 0.05);
+      padding: 0;
+      margin-top: 2rem;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      position: relative;
+    }
+    
+    h2 {
+      color: var(--gray-800);
+      font-weight: 700;
+      text-align: center;
+      margin: 0;
+      padding: 2.5rem;
+      background: linear-gradient(135deg, var(--gray-50) 0%, var(--white) 100%);
+      border-radius: 0;
+      font-size: 2.25rem;
+      letter-spacing: -0.025em;
+      position: relative;
+      overflow: hidden;
+      border-bottom: 1px solid var(--gray-200);
+    }
+    
+    h2::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.05), transparent);
+      animation: shimmer 3s infinite;
+    }
+    
+    @keyframes shimmer {
+      0% { left: -100%; }
+      100% { left: 100%; }
+    }
+    
+    .form-label {
+      color: var(--gray-800);
+      font-weight: 600;
+      font-size: 1rem;
+      margin-bottom: 0.75rem;
+      display: block;
+    }
+    
+    .form-control {
+      border: 1px solid var(--gray-300);
+      border-radius: 12px;
+      padding: 1rem;
+      font-size: 1rem;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      background-color: var(--white);
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+    
+    .form-control:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+      outline: none;
+      transform: translateY(-1px);
+    }
+    
+    .form-control:hover {
+      border-color: var(--gray-400);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      border: none;
+      color: var(--white);
+      font-weight: 600;
+      padding: 0.875rem 2rem;
+      border-radius: 12px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      font-size: 1rem;
+      letter-spacing: 0.025em;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .btn-primary::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.5s;
+    }
+    
+    .btn-primary:hover::before {
+      left: 100%;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+    }
+    
+    .btn-primary:active {
+      transform: translateY(0);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    
+    .btn-primary:disabled {
+      background: var(--gray-400);
+      color: var(--white);
+      transform: none;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+    
+    /* PDF Download Button */
+    .btn-pdf {
+      background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
+      border: none;
+      color: var(--white);
+      font-weight: 600;
+      padding: 0.75rem 1.5rem;
+      border-radius: 12px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      font-size: 0.875rem;
+      letter-spacing: 0.025em;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .btn-pdf::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.5s;
+    }
+    
+    .btn-pdf:hover::before {
+      left: 100%;
+    }
+    
+    .btn-pdf:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      background: linear-gradient(135deg, #059669 0%, var(--success) 100%);
+    }
+    
+    .btn-pdf:disabled {
+      background: var(--gray-400);
+      color: var(--white);
+      transform: none;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+    
+    /* PDF-specific styles */
+    .pdf-content {
+      font-family: 'Inter', 'Segoe UI', sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    .pdf-content h1 {
+      color: var(--craftsman-red);
+      font-size: 2.5rem;
+      font-weight: 800;
+      text-align: center;
+      margin-bottom: 2rem;
+      border-bottom: 3px solid var(--craftsman-red);
+      padding-bottom: 1rem;
+    }
+    
+    .pdf-content h2 {
+      color: var(--craftsman-red);
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+      border-left: 4px solid var(--craftsman-red);
+      padding-left: 1rem;
+    }
+    
+    .pdf-content h3 {
+      color: var(--craftsman-black);
+      font-size: 1.4rem;
+      font-weight: 600;
+      margin-top: 1.5rem;
+      margin-bottom: 0.8rem;
+    }
+    
+    .pdf-content p {
+      margin-bottom: 1rem;
+      text-align: justify;
+    }
+    
+    .pdf-content ul, .pdf-content ol {
+      margin-bottom: 1rem;
+      padding-left: 2rem;
+    }
+    
+    .pdf-content li {
+      margin-bottom: 0.5rem;
+    }
+    
+    .pdf-content blockquote {
+      border-left: 4px solid var(--craftsman-red);
+      padding-left: 1rem;
+      margin: 1.5rem 0;
+      font-style: italic;
+      background-color: #f8f9fa;
+      padding: 1rem;
+      border-radius: 0 8px 8px 0;
+    }
+    
+    .pdf-content a {
+      color: var(--craftsman-red);
+      text-decoration: none;
+    }
+    
+    .pdf-content a:hover {
+      text-decoration: underline;
+    }
+    
+    .pdf-content code {
+      background-color: #f1f3f4;
+      padding: 0.2rem 0.4rem;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9em;
+    }
+    
+    .pdf-content pre {
+      background-color: #f8f9fa;
+      padding: 1rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      border: 1px solid #e9ecef;
+    }
+    
+    .pdf-content table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5rem 0;
+    }
+    
+    .pdf-content th, .pdf-content td {
+      border: 1px solid #dee2e6;
+      padding: 0.75rem;
+      text-align: left;
+    }
+    
+    .pdf-content th {
+      background-color: var(--craftsman-red);
+      color: white;
+      font-weight: 600;
+    }
+    
+    .pdf-content .page-break {
+      page-break-before: always;
+    }
+    
+    .step-header { 
+      cursor: pointer; 
+      padding: 1rem;
+      border-radius: 12px;
+      margin-bottom: 0.75rem;
+      transition: all 0.2s ease;
+      font-weight: 600;
+      border: 1px solid transparent;
+    }
+    
+    .step-running { 
+      background: linear-gradient(135deg, var(--primary) 0%, rgba(99, 102, 241, 0.1) 100%);
+      color: var(--white);
+      border-color: var(--primary);
+      box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.1);
+    }
+    
+    .step-done { 
+      background: linear-gradient(135deg, var(--success) 0%, rgba(16, 185, 129, 0.1) 100%);
+      color: var(--white);
+      border-color: var(--success);
+      box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.1);
+    }
+    
+    .step-error { 
+      background: linear-gradient(135deg, var(--error) 0%, rgba(239, 68, 68, 0.1) 100%);
+      color: var(--white);
+      border-color: var(--error);
+      box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.1);
+    }
+    
+    .step-pending { 
+      background: linear-gradient(135deg, var(--gray-500) 0%, rgba(100, 116, 139, 0.1) 100%);
+      color: var(--white);
+      border-color: var(--gray-500);
+      box-shadow: 0 4px 6px -1px rgba(100, 116, 139, 0.1);
+    }
+    
+    .substep { 
+      font-size: 0.9em; 
+      margin-left: 1.5rem; 
+      margin-top: 0.75rem;
+    }
+    
+    .substep-header { 
+      cursor: pointer; 
+      font-weight: 600; 
+      color: var(--gray-800);
+      padding: 0.75rem;
+      background-color: var(--gray-100);
+      border-radius: 8px;
+      transition: all 0.2s ease;
+      border: 1px solid var(--gray-200);
+    }
+    
+    .substep-header:hover {
+      background-color: var(--primary);
+      color: var(--white);
+      border-color: var(--primary);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.1);
+    }
+    
+    .status-icon { 
+      margin-right: 0.5rem; 
+    }
+    
+    #stepStatusList div { 
+      margin-bottom: 0.25rem; 
+    }
+    
+    #finalReport { 
+      background-color: var(--white); 
+      border: 1px solid var(--gray-200); 
+      padding: 2rem; 
+      border-radius: 16px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      color: #000000 !important;
+    }
+    
+    /* Ensure all text in final report is black */
+    #finalReport * {
+      color: #000000 !important;
+    }
+    
+    /* Override any inherited colors in the report */
+    #finalReport h1, #finalReport h2, #finalReport h3, #finalReport h4, #finalReport h5, #finalReport h6 {
+      color: #000000 !important;
+    }
+    
+    #finalReport p, #finalReport div, #finalReport span, #finalReport li, #finalReport td, #finalReport th {
+      color: #000000 !important;
+    }
+    
+    /* Keep links blue but ensure they're visible */
+    #finalReport a {
+      color: #0066cc !important;
+    }
+    
+    #finalReport a:hover {
+      color: #004499 !important;
+    }
+    
+    /* Ensure step details content is also black */
+    .card-body, .card-body * {
+      color: #000000 !important;
+    }
+    
+    .card-body a {
+      color: #0066cc !important;
+    }
+    
+    .card-body a:hover {
+      color: #004499 !important;
+    }
+    
+    .card {
+      border: 1px solid var(--gray-200);
+      border-radius: 16px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      transition: all 0.2s ease;
+    }
+    
+    .card:hover {
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      transform: translateY(-2px);
+    }
+    
+    .card-header {
+      background: linear-gradient(135deg, var(--gray-800) 0%, var(--gray-700) 100%);
+      color: var(--white);
+      font-weight: 600;
+      border-radius: 16px 16px 0 0;
+    }
+    
+    .btn-outline-secondary {
+      border: 1px solid var(--gray-300);
+      color: var(--gray-700);
+      font-weight: 600;
+      transition: all 0.2s ease;
+      background-color: var(--white);
+    }
+    
+    .btn-outline-secondary:hover {
+      background-color: var(--primary);
+      border-color: var(--primary);
+      color: var(--white);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.1);
+    }
+    
+    .form-text {
+      color: var(--gray-500);
+      font-style: italic;
+    }
+    
+    code {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: var(--white);
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+      font-weight: 500;
+      font-size: 0.875em;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+    
+    .spinner-border-sm {
+      color: var(--primary) !important;
+    }
+    
+    /* Chat History Panel Styles */
+    .chat-history-panel {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 24px;
+      padding: 2rem;
+      height: calc(100vh - 2rem);
+      overflow-y: auto;
+      box-shadow: 
+        0 25px 50px -12px rgba(0, 0, 0, 0.25),
+        0 0 0 1px rgba(255, 255, 255, 0.05);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+    }
+    
+    .chat-history-panel::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--gray-300) 0%, var(--gray-400) 100%);
+      border-radius: 24px 24px 0 0;
+    }
+    
+    .chat-history-panel.collapsed {
+      width: 0;
+      padding: 0;
+      border: none;
+      overflow: hidden;
+    }
+    
+    .sidebar-toggle {
+      position: fixed;
+      top: 2rem;
+      left: 1rem;
+      z-index: 1000;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      border: 2px solid var(--white);
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    
+    .sidebar-toggle:hover {
+      background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+      transform: scale(1.05) translateY(-2px);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+    
+    .sidebar-toggle.collapsed {
+      left: 1rem;
+    }
+    
+    .sidebar-toggle.expanded {
+      left: calc(25% + 0.5rem);
+    }
+    
+    .sidebar-toggle i {
+      font-size: 1.2rem;
+      color: var(--white);
+      transition: transform 0.2s ease;
+    }
+    
+    .sidebar-toggle.collapsed i {
+      transform: rotate(180deg);
+    }
+    
+    .chat-history-panel h5 {
+      color: var(--gray-800);
+      font-weight: 700;
+      text-align: center;
+      padding: 1rem 0;
+      border-bottom: 2px solid var(--gray-300);
+      margin-bottom: 2rem;
+      font-size: 1.25rem;
+      letter-spacing: -0.025em;
+      position: relative;
+    }
+    
+    .chat-history-panel h5::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 2px;
+      background: var(--gray-400);
+      border-radius: 1px;
+    }
+    
+    .chat-history-list {
+      max-height: calc(100vh - 200px);
+      overflow-y: auto;
+    }
+    
+    .chat-history-item {
+      background: linear-gradient(135deg, var(--gray-50) 0%, var(--white) 100%);
+      border: 1px solid var(--gray-200);
+      border-radius: 12px;
+      padding: 1rem;
+      margin-bottom: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    
+    .chat-history-item:hover {
+      background: linear-gradient(135deg, var(--primary) 0%, rgba(99, 102, 241, 0.1) 100%);
+      border-color: var(--primary);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.1);
+    }
+    
+    .chat-history-item.active {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      border-color: var(--primary-dark);
+      color: var(--white);
+    }
+    
+    .chat-history-title {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--gray-800);
+      margin-bottom: 0.5rem;
+      line-height: 1.3;
+    }
+    
+    .chat-history-date {
+      font-size: 0.75rem;
+      color: var(--gray-500);
+      margin-bottom: 0.25rem;
+    }
+    
+    .chat-history-prompt {
+      font-size: 0.8rem;
+      color: var(--gray-500);
+      line-height: 1.2;
+      max-height: 3rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+    
+    .chat-history-status {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      font-size: 0.7rem;
+      padding: 0.2rem 0.4rem;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    
+    .status-completed {
+      background-color: var(--success);
+      color: var(--white);
+    }
+    
+    .status-running {
+      background-color: var(--primary);
+      color: var(--white);
+    }
+    
+    .main-content {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      border-radius: 24px;
+      padding: 3rem;
+      box-shadow: 
+        0 25px 50px -12px rgba(0, 0, 0, 0.25),
+        0 0 0 1px rgba(255, 255, 255, 0.05);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .main-content::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--gray-300) 0%, var(--gray-400) 100%);
+      border-radius: 24px 24px 0 0;
+    }
+    
+    .main-content.expanded {
+      margin-left: 0;
+    }
+    
+    .sidebar-column {
+      transition: all 0.3s ease;
+    }
+    
+    .sidebar-column.collapsed {
+      width: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .chat-history-panel {
+        height: auto;
+        margin-bottom: 1rem;
+      }
+      
+      .chat-history-list {
+        max-height: 300px;
+      }
+      
+      .sidebar-toggle {
+        top: 1rem;
+        left: 0.5rem;
+        width: 40px;
+        height: 40px;
+      }
+      
+      .sidebar-toggle.expanded {
+        left: calc(25% + 0.25rem);
+      }
+    }
   </style>
 </head>
 <body class="p-4">
-<div class="container">
-  <h2 class="mb-4">Reflective Research Agent — Planning and Tool Use</h2>
+<!-- Sidebar Toggle Button -->
+<button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" title="Toggle Chat History (H key)">
+  <i class="fas fa-chevron-left"></i>
+</button>
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Left Sidebar - Chat History -->
+    <div class="col-md-3 sidebar-column" id="sidebarColumn">
+      <div class="chat-history-panel" id="chatHistoryPanel">
+        <h5 class="mb-3">📚 Research History</h5>
+        <div id="chatHistory" class="chat-history-list">
+          <!-- Chat history items will be loaded here -->
+        </div>
+      </div>
+    </div>
+    
+    <!-- Main Content Area -->
+    <div class="col-md-9" id="mainContentColumn">
+      <div class="main-content" id="mainContent">
+        <h2 class="mb-4">🔧 Deep Research Agent</h2>
 
 
 
@@ -52,6 +798,60 @@ let currentTopic = null;
 let pollInterval = null;
 let finalReportMarkdown = "";
 const renderedSteps = new Map();
+let chatHistory = [];
+let sidebarCollapsed = false;
+
+// Load chat history on page load
+document.addEventListener('DOMContentLoaded', function() {
+  loadChatHistory();
+});
+
+// Keyboard shortcut for toggling sidebar (H key)
+document.addEventListener('keydown', function(event) {
+  // Only trigger if not typing in an input field
+  if (event.target.tagName !== 'INPUT' && event.target.tagName !== 'TEXTAREA') {
+    if (event.key.toLowerCase() === 'h') {
+      event.preventDefault();
+      toggleSidebar();
+    }
+  }
+});
+
+// Sidebar toggle functionality
+function toggleSidebar() {
+  const sidebarColumn = document.getElementById('sidebarColumn');
+  const chatHistoryPanel = document.getElementById('chatHistoryPanel');
+  const mainContentColumn = document.getElementById('mainContentColumn');
+  const mainContent = document.getElementById('mainContent');
+  const toggleButton = document.getElementById('sidebarToggle');
+  const toggleIcon = toggleButton.querySelector('i');
+  
+  sidebarCollapsed = !sidebarCollapsed;
+  
+  if (sidebarCollapsed) {
+    // Collapse sidebar
+    sidebarColumn.classList.add('collapsed');
+    chatHistoryPanel.classList.add('collapsed');
+    mainContentColumn.classList.remove('col-md-9');
+    mainContentColumn.classList.add('col-md-12');
+    mainContent.classList.add('expanded');
+    toggleButton.classList.remove('expanded');
+    toggleButton.classList.add('collapsed');
+    toggleIcon.classList.remove('fa-chevron-left');
+    toggleIcon.classList.add('fa-chevron-right');
+  } else {
+    // Expand sidebar
+    sidebarColumn.classList.remove('collapsed');
+    chatHistoryPanel.classList.remove('collapsed');
+    mainContentColumn.classList.remove('col-md-12');
+    mainContentColumn.classList.add('col-md-9');
+    mainContent.classList.remove('expanded');
+    toggleButton.classList.remove('collapsed');
+    toggleButton.classList.add('expanded');
+    toggleIcon.classList.remove('fa-chevron-right');
+    toggleIcon.classList.add('fa-chevron-left');
+  }
+}
 
 function setTaskInfoGenerating(topic){
   document.getElementById('taskInfo').innerHTML = `
@@ -207,12 +1007,27 @@ function fetchTaskStatus() {
         finalReportMarkdown = task.result.html_report;
         document.getElementById('finalOutput').innerHTML = `
           <h4>Final Report</h4>
-          <div class="mb-2">
-            <button class="btn btn-outline-secondary btn-sm me-2" onclick="downloadMarkdown()">Download .md</button>
-            <button class="btn btn-outline-secondary btn-sm" onclick="downloadHTML()">Download .html</button>
+          <div class="mb-3">
+            <div class="btn-group me-2" role="group">
+              <button class="btn btn-pdf btn-sm" onclick="downloadPDF()" title="Download PDF (Abstract to References)">
+                <i class="fas fa-file-pdf me-1"></i>PDF Report
+              </button>
+              <button class="btn btn-pdf btn-sm" onclick="downloadFullPDF()" title="Download Full PDF (including User Prompt)">
+                <i class="fas fa-file-pdf me-1"></i>Full PDF
+              </button>
+            </div>
+            <button class="btn btn-outline-secondary btn-sm me-2" onclick="downloadMarkdown()">
+              <i class="fas fa-file-alt me-1"></i>Download .md
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" onclick="downloadHTML()">
+              <i class="fas fa-file-code me-1"></i>Download .html
+            </button>
           </div>
           <div id="finalReport">${marked.parse(finalReportMarkdown)}</div>
         `;
+        
+        // Refresh chat history when a task is completed
+        loadChatHistory();
       }
     });
 }
@@ -244,6 +1059,359 @@ function downloadHTML() {
   link.href = URL.createObjectURL(blob);
   link.download = `final_report_${currentTaskId}.html`;
   link.click();
+}
+
+function extractReportContent(markdown) {
+  // Split the markdown into lines
+  const lines = markdown.split('\n');
+  let startIndex = -1;
+  let endIndex = -1;
+  
+  // Find the start of Abstract section
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].trim().toLowerCase().startsWith('## abstract')) {
+      startIndex = i;
+      break;
+    }
+  }
+  
+  // Find the end of References section
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (lines[i].trim().toLowerCase().startsWith('## references')) {
+      // Find the end of the references section (next ## or end of file)
+      for (let j = i + 1; j < lines.length; j++) {
+        if (lines[j].trim().startsWith('##') && lines[j].trim() !== '## References') {
+          endIndex = j;
+          break;
+        }
+      }
+      if (endIndex === -1) {
+        endIndex = lines.length;
+      }
+      break;
+    }
+  }
+  
+  // If we found both start and end, extract the content
+  if (startIndex !== -1 && endIndex !== -1) {
+    const extractedLines = lines.slice(startIndex, endIndex);
+    return extractedLines.join('\n');
+  }
+  
+  // Fallback: return the original markdown
+  return markdown;
+}
+
+function downloadPDF() {
+  if (!finalReportMarkdown) {
+    alert('No report available to download');
+    return;
+  }
+
+  // Show loading state
+  const pdfButton = document.querySelector('.btn-pdf');
+  const originalText = pdfButton.innerHTML;
+  pdfButton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Generating PDF...';
+  pdfButton.disabled = true;
+
+  // Extract content from Abstract to References
+  const cleanMarkdown = extractReportContent(finalReportMarkdown);
+
+  try {
+    // Parse markdown to HTML
+    const htmlContent = marked.parse(cleanMarkdown);
+    
+    // Create a temporary container for PDF generation
+    const tempContainer = document.createElement('div');
+    tempContainer.className = 'pdf-content';
+    tempContainer.style.position = 'absolute';
+    tempContainer.style.left = '-9999px';
+    tempContainer.style.top = '0';
+    tempContainer.style.width = '800px';
+    tempContainer.style.backgroundColor = 'white';
+    tempContainer.innerHTML = htmlContent;
+    
+    // Add to document temporarily
+    document.body.appendChild(tempContainer);
+    
+    // Generate PDF using html2canvas and jsPDF
+    html2canvas(tempContainer, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      width: 800,
+      height: tempContainer.scrollHeight
+    }).then(canvas => {
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 295; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      
+      let position = 0;
+      
+      // Add first page
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+      
+      // Add additional pages if needed
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+      
+      // Download the PDF
+      const fileName = `research_report_${currentTaskId || 'report'}_${new Date().toISOString().split('T')[0]}.pdf`;
+      pdf.save(fileName);
+      
+      // Clean up
+      document.body.removeChild(tempContainer);
+      
+      // Reset button
+      pdfButton.innerHTML = originalText;
+      pdfButton.disabled = false;
+      
+    }).catch(error => {
+      console.error('Error generating PDF:', error);
+      alert('Error generating PDF. Please try again.');
+      
+      // Clean up
+      if (document.body.contains(tempContainer)) {
+        document.body.removeChild(tempContainer);
+      }
+      
+      // Reset button
+      pdfButton.innerHTML = originalText;
+      pdfButton.disabled = false;
+    });
+    
+  } catch (error) {
+    console.error('Error preparing PDF:', error);
+    alert('Error preparing PDF. Please try again.');
+    
+    // Reset button
+    pdfButton.innerHTML = originalText;
+    pdfButton.disabled = false;
+  }
+}
+
+function downloadFullPDF() {
+  if (!finalReportMarkdown) {
+    alert('No report available to download');
+    return;
+  }
+
+  // Show loading state
+  const pdfButtons = document.querySelectorAll('.btn-pdf');
+  const originalTexts = Array.from(pdfButtons).map(btn => btn.innerHTML);
+  pdfButtons.forEach(btn => {
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Generating PDF...';
+    btn.disabled = true;
+  });
+
+  try {
+    // Parse markdown to HTML (full report)
+    const htmlContent = marked.parse(finalReportMarkdown);
+    
+    // Create a temporary container for PDF generation
+    const tempContainer = document.createElement('div');
+    tempContainer.className = 'pdf-content';
+    tempContainer.style.position = 'absolute';
+    tempContainer.style.left = '-9999px';
+    tempContainer.style.top = '0';
+    tempContainer.style.width = '800px';
+    tempContainer.style.backgroundColor = 'white';
+    tempContainer.innerHTML = htmlContent;
+    
+    // Add to document temporarily
+    document.body.appendChild(tempContainer);
+    
+    // Generate PDF using html2canvas and jsPDF
+    html2canvas(tempContainer, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      width: 800,
+      height: tempContainer.scrollHeight
+    }).then(canvas => {
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 295; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      
+      let position = 0;
+      
+      // Add first page
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+      
+      // Add additional pages if needed
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+      
+      // Download the PDF
+      const fileName = `full_research_report_${currentTaskId || 'report'}_${new Date().toISOString().split('T')[0]}.pdf`;
+      pdf.save(fileName);
+      
+      // Clean up
+      document.body.removeChild(tempContainer);
+      
+      // Reset buttons
+      pdfButtons.forEach((btn, index) => {
+        btn.innerHTML = originalTexts[index];
+        btn.disabled = false;
+      });
+      
+    }).catch(error => {
+      console.error('Error generating PDF:', error);
+      alert('Error generating PDF. Please try again.');
+      
+      // Clean up
+      if (document.body.contains(tempContainer)) {
+        document.body.removeChild(tempContainer);
+      }
+      
+      // Reset buttons
+      pdfButtons.forEach((btn, index) => {
+        btn.innerHTML = originalTexts[index];
+        btn.disabled = false;
+      });
+    });
+    
+  } catch (error) {
+    console.error('Error preparing PDF:', error);
+    alert('Error preparing PDF. Please try again.');
+    
+    // Reset buttons
+    pdfButtons.forEach((btn, index) => {
+      btn.innerHTML = originalTexts[index];
+      btn.disabled = false;
+    });
+  }
+}
+
+// Chat History Functions
+function loadChatHistory() {
+  fetch('/chat_history')
+    .then(res => res.json())
+    .then(data => {
+      chatHistory = data.history || [];
+      renderChatHistory();
+    })
+    .catch(err => {
+      console.error('Error loading chat history:', err);
+      document.getElementById('chatHistory').innerHTML = '<p class="text-muted">No chat history available</p>';
+    });
+}
+
+function renderChatHistory() {
+  const historyContainer = document.getElementById('chatHistory');
+  
+  if (chatHistory.length === 0) {
+    historyContainer.innerHTML = '<p class="text-muted text-center">No research history yet</p>';
+    return;
+  }
+  
+  const historyHTML = chatHistory.map(item => `
+    <div class="chat-history-item" onclick="loadHistoryItem('${item.id}')" data-task-id="${item.id}">
+      <div class="chat-history-status status-completed">✓</div>
+      <div class="chat-history-title">${item.title}</div>
+      <div class="chat-history-date">${formatDate(item.created_at)}</div>
+      <div class="chat-history-prompt">${item.prompt}</div>
+    </div>
+  `).join('');
+  
+  historyContainer.innerHTML = historyHTML;
+}
+
+function loadHistoryItem(taskId) {
+  // Remove active class from all items
+  document.querySelectorAll('.chat-history-item').forEach(item => {
+    item.classList.remove('active');
+  });
+  
+  // Add active class to clicked item
+  document.querySelector(`[data-task-id="${taskId}"]`).classList.add('active');
+  
+  // Load the specific history item
+  fetch(`/chat_history/${taskId}`)
+    .then(res => res.json())
+    .then(data => {
+      // Clear current content
+      document.getElementById('stepStatusList').innerHTML = '';
+      document.getElementById('stepDetails').innerHTML = '';
+      document.getElementById('taskInfo').innerHTML = '';
+      
+      // Display the loaded report
+      if (data.final_report) {
+        finalReportMarkdown = data.final_report;
+        document.getElementById('finalOutput').innerHTML = `
+          <h4>📄 ${data.title}</h4>
+          <div class="mb-3">
+            <div class="btn-group me-2" role="group">
+              <button class="btn btn-pdf btn-sm" onclick="downloadPDF()" title="Download PDF (Abstract to References)">
+                <i class="fas fa-file-pdf me-1"></i>PDF Report
+              </button>
+              <button class="btn btn-pdf btn-sm" onclick="downloadFullPDF()" title="Download Full PDF (including User Prompt)">
+                <i class="fas fa-file-pdf me-1"></i>Full PDF
+              </button>
+            </div>
+            <button class="btn btn-outline-secondary btn-sm me-2" onclick="downloadMarkdown()">
+              <i class="fas fa-file-alt me-1"></i>Download .md
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" onclick="downloadHTML()">
+              <i class="fas fa-file-code me-1"></i>Download .html
+            </button>
+          </div>
+          <div id="finalReport">${marked.parse(finalReportMarkdown)}</div>
+        `;
+      } else {
+        document.getElementById('finalOutput').innerHTML = `
+          <div class="alert alert-warning">
+            <h4>📄 ${data.title}</h4>
+            <p>This research is still in progress or the report is not available yet.</p>
+          </div>
+        `;
+      }
+      
+      // Update current task ID for downloads
+      currentTaskId = taskId;
+    })
+    .catch(err => {
+      console.error('Error loading history item:', err);
+      document.getElementById('finalOutput').innerHTML = `
+        <div class="alert alert-danger">
+          <h4>Error</h4>
+          <p>Could not load the selected research item.</p>
+        </div>
+      `;
+    });
+}
+
+function formatDate(dateString) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffTime = Math.abs(now - date);
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 1) {
+    return 'Yesterday';
+  } else if (diffDays < 7) {
+    return `${diffDays} days ago`;
+  } else {
+    return date.toLocaleDateString();
+  }
 }
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

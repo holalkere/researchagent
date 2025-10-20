@@ -276,14 +276,14 @@ load_dotenv()  # Loads environment variables from a .env file
 
 
 def tavily_search_tool(
-    query: str, max_results: int = 5, include_images: bool = False
+    query: str, max_results: int = 10, include_images: bool = False
 ) -> list[dict]:
     """
     Perform a search using the Tavily API.
 
     Args:
         query (str): The search query.
-        max_results (int): Number of results to return (default 5).
+        max_results (int): Number of results to return (default 10).
         include_images (bool): Whether to include image results.
 
     Returns:
@@ -335,7 +335,7 @@ tavily_tool_def = {
                 "max_results": {
                     "type": "integer",
                     "description": "Maximum number of results to return.",
-                    "default": 5,
+                    "default": 10,
                 },
                 "include_images": {
                     "type": "boolean",
