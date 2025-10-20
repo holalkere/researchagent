@@ -12,7 +12,7 @@ from src.research_tools import (
 from openai import AzureOpenAI
 
 client = AzureOpenAI(
-    api_version="2024-12-01-preview",
+    api_version="2025-01-01-preview",
     azure_endpoint="https://oai-sbd-genai-common-eastus2-dev.openai.azure.com/",
     api_key=os.getenv("AZURE_OPENAI_KEY")
 )
@@ -167,7 +167,6 @@ USER RESEARCH REQUEST:
             messages=messages,
             tools=tools,
             tool_choice="auto",
-            temperature=0.0,  # Use deterministic output
         )
 
         content = resp.choices[0].message.content or ""
@@ -336,7 +335,6 @@ IMPORTANT: In your report, make sure to include a "User Prompt" section right af
         resp = client.chat.completions.create(
             model=os.getenv("AZURE_OPENAI_DEPLOYMENT", "sbd-gpt-4.1-mini"),
             messages=messages_,
-            temperature=0,
             max_tokens=max_tokens,
         )
         return resp.choices[0].message.content or ""
@@ -395,9 +393,8 @@ Return only the revised, polished text in Markdown format without explanatory co
     ]
 
     response = client.chat.completions.create(
-        model=os.getenv("AZURE_OPENAI_DEPLOYMENT", "sbd-gpt-4.1-mini"), 
-        messages=messages, 
-        temperature=0
+        model=os.getenv("AZURE_OPENAI_DEPLOYMENT", "sbd-o3-mini-0131"), 
+        messages=messages
     )
 
     content = response.choices[0].message.content
@@ -450,9 +447,9 @@ def parallel_writer_agent(
             try:
                 content = future.result()
                 section_results[section["name"]] = content
-                print(f"✅ Completed {section['title']} section")
+                print(f"SUCCESS: Completed {section['title']} section")
             except Exception as e:
-                print(f"❌ Error writing {section['name']}: {e}")
+                print(f"ERROR: Error writing {section['name']}: {e}")
                 section_results[section["name"]] = f"Error generating {section['title']}"
     
     # Assemble final report
@@ -487,7 +484,6 @@ def write_section_parallel(section: Dict, prompt: str, research_data: str, model
     response = client.chat.completions.create(
         model=os.getenv("AZURE_OPENAI_DEPLOYMENT", "sbd-gpt-4.1-mini"),
         messages=messages,
-        temperature=0,
         max_tokens=2000
     )
     
@@ -617,7 +613,6 @@ Do not generate full report structures (Title, Abstract, Introduction, etc.). Fo
         resp = client.chat.completions.create(
             model=os.getenv("AZURE_OPENAI_DEPLOYMENT", "sbd-gpt-4.1-mini"),
             messages=messages,
-            temperature=0.3,
             max_tokens=max_tokens,
         )
 

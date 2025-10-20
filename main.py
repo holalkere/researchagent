@@ -20,12 +20,6 @@ from src.planning_agent import planner_agent, executor_agent_step
 import html, textwrap
 
 # === Load env vars ===
-# Clear any existing environment variables that might override .env
-os.environ.pop('AZURE_OPENAI_KEY', None)
-os.environ.pop('AZURE_OPENAI_ENDPOINT', None)
-os.environ.pop('AZURE_OPENAI_DEPLOYMENT', None)
-os.environ.pop('AZURE_OPENAI_API_VERSION', None)
-os.environ.pop('TAVILY_API_KEY', None)
 load_dotenv()
 
 # API keys are loaded from .env file via load_dotenv() above
@@ -60,12 +54,12 @@ class Task(Base):
 try:
     Base.metadata.drop_all(bind=engine)
 except Exception as e:
-    print(f"\u274c DB creation failed: {e}")
+    print(f"ERROR: DB creation failed: {e}")
 
 try:
     Base.metadata.create_all(bind=engine)
 except Exception as e:
-    print(f"\u274c DB creation failed: {e}")
+    print(f"ERROR: DB creation failed: {e}")
 
 # === FastAPI ===
 app = FastAPI()

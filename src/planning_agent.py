@@ -15,7 +15,7 @@ from src.agents import (
 from openai import AzureOpenAI
 
 client = AzureOpenAI(
-    api_version="2024-12-01-preview",
+    api_version="2025-01-01-preview",
     azure_endpoint="https://oai-sbd-genai-common-eastus2-dev.openai.azure.com/",
     api_key=os.getenv("AZURE_OPENAI_KEY")
 )
@@ -78,9 +78,8 @@ Topic: "{topic}"
 """
 
     response = client.chat.completions.create(
-        model=os.getenv("AZURE_OPENAI_DEPLOYMENT", "sbd-gpt-4.1-mini"),
+        model=os.getenv("AZURE_OPENAI_DEPLOYMENT", "sbd-o3-mini-0131"),
         messages=[{"role": "user", "content": prompt}],
-        temperature=1,
     )
 
     raw = response.choices[0].message.content.strip()
