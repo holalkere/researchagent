@@ -428,6 +428,7 @@ def run_agent_workflow(task_id: str, prompt: str, initial_plan_steps: list, adva
 def generate_pdf(request: dict):
     """Generate PDF from markdown content"""
     try:
+        print("=== PDF Generation Started ===")
         markdown_content = request.get("content", "")
         pdf_type = request.get("type", "report")  # "report"
         original_prompt = request.get("original_prompt", "")
@@ -510,12 +511,15 @@ def generate_pdf(request: dict):
         try:
             logo_path = "static/beacon-research-agent-logo.png"
             if os.path.exists(logo_path):
+                print(f"Logo file found at: {logo_path}")
                 # Load logo and get its natural dimensions to maintain aspect ratio
                 logo = Image(logo_path)
+                print(f"Logo loaded successfully. Original dimensions: {logo.imageWidth}x{logo.imageHeight}")
                 # Scale logo to reasonable size while maintaining aspect ratio
                 # Set max height to 1 inch, width will scale proportionally
                 logo.drawHeight = 1*inch
                 logo.drawWidth = logo.drawHeight * (logo.imageWidth / logo.imageHeight)
+                print(f"Logo scaled to: {logo.drawWidth}x{logo.drawHeight}")
                 
                 # Create a table with logo on left and title on right
                 header_data = [
@@ -530,11 +534,15 @@ def generate_pdf(request: dict):
                     ('TOPPADDING', (0, 0), (-1, -1), 0),
                 ]))
                 story.append(header_table)
+                print("Header table created successfully")
             else:
+                print(f"Logo file not found at: {logo_path}")
                 # If no logo, just add title
                 story.append(Paragraph("Research Report", title_style))
         except Exception as e:
-            print(f"Warning: Could not add logo to PDF: {e}")
+            print(f"Error adding logo to PDF: {e}")
+            import traceback
+            traceback.print_exc()
             # Fallback to just title if logo fails
             story.append(Paragraph("Research Report", title_style))
         
@@ -546,8 +554,12 @@ def generate_pdf(request: dict):
         
         # Add original prompt if provided (clean, single display)
         if original_prompt:
+            # Clean up the prompt text to remove any "User Prompt:" prefixes
+            clean_prompt = original_prompt
+            if clean_prompt.lower().startswith('user prompt:'):
+                clean_prompt = clean_prompt[12:].strip()  # Remove "User Prompt:" prefix
             # Sanitize the prompt text to avoid PDF generation issues
-            sanitized_prompt = html.escape(original_prompt) if original_prompt else ""
+            sanitized_prompt = html.escape(clean_prompt) if clean_prompt else ""
             story.append(Paragraph(sanitized_prompt, body_style))
             story.append(Spacer(1, 20))
         
@@ -562,16 +574,28 @@ def generate_pdf(request: dict):
                 continue
             
             # Skip User Prompt sections to avoid repetition
-            if line.lower().startswith('## user prompt') or line.lower().startswith('# user prompt'):
+            line_lower = line.lower().strip()
+            if (line_lower.startswith('## user prompt') or 
+                line_lower.startswith('# user prompt') or
+                line_lower.startswith('user prompt:') or
+                line_lower == 'user prompt' or
+                'user prompt:' in line_lower or
+                line_lower.startswith('user prompt')):
                 skip_user_prompt_section = True
                 continue
-            elif line.startswith('##') and not line.lower().startswith('## user prompt'):
+            elif line.startswith('##') and not any(phrase in line_lower for phrase in ['user prompt', 'user prompt:']):
                 skip_user_prompt_section = False
-            elif line.startswith('#') and not line.lower().startswith('# user prompt'):
+            elif line.startswith('#') and not any(phrase in line_lower for phrase in ['user prompt', 'user prompt:']):
                 skip_user_prompt_section = False
             
             if skip_user_prompt_section:
                 continue
+                
+            # Clean up any remaining "User Prompt:" prefixes in content
+            if line_lower.startswith('user prompt:'):
+                line = line[12:].strip()  # Remove "User Prompt:" prefix
+                if not line:  # If line becomes empty, skip it
+                    continue
                 
             # Handle markdown headers
             if line.startswith('# '):
