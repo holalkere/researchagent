@@ -250,7 +250,7 @@ USER RESEARCH REQUEST:
                 if tr['tool_name'] == 'tavily_search_tool' and isinstance(tr['result'], list):
                     tools_html += "<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>"
                     tools_html += "<tr><th>#</th><th>Title</th><th>Content</th><th>URL</th></tr>"
-                    for i, result in enumerate(tr['result'][:10], 1):  # Show first 10 results
+                    for i, result in enumerate(tr['result'][:20], 1):  # Show first 20 results
                         if isinstance(result, dict) and 'title' in result:
                             title = result.get('title', 'No title')
                             content_text = result.get('content', 'No content')[:200]
@@ -263,7 +263,7 @@ USER RESEARCH REQUEST:
                 elif tr['tool_name'] == 'arxiv_search_tool' and isinstance(tr['result'], list):
                     tools_html += "<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>"
                     tools_html += "<tr><th>#</th><th>Title</th><th>Authors</th><th>Published</th><th>Summary</th><th>URL</th><th>PDF</th></tr>"
-                    for i, result in enumerate(tr['result'][:10], 1):  # Show first 10 results
+                    for i, result in enumerate(tr['result'][:20], 1):  # Show first 20 results
                         if isinstance(result, dict) and 'title' in result:
                             title = result.get('title', 'No title')
                             authors = ', '.join(result.get('authors', []))[:100]
@@ -752,7 +752,7 @@ def extract_references_from_research(research_data: str) -> str:
     urls = re.findall(r'https?://[^\s<>"]+', research_data)
     references = []
     
-    for i, url in enumerate(urls[:10], 1):  # Limit to 10 references
+    for i, url in enumerate(urls[:20], 1):  # Limit to 10 references
         references.append(f"[{i}] {url}")
     
     return '\n'.join(references) if references else "References will be added based on research findings."
