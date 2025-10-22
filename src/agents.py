@@ -442,15 +442,14 @@ You are an expert academic writer with a PhD-level understanding of scholarly co
 
 ## MANDATORY STRUCTURE:
 1. **Title**: Clear, concise, and descriptive of the content
-2. **User Prompt**: Display the original research question/prompt that initiated this report
-3. **Abstract**: Brief summary (100-150 words) of the report's purpose, methods, and key findings
-4. **Introduction**: Present the topic, research question/problem, significance, and outline of the report
-5. **Background/Literature Review**: Contextualize the topic within existing scholarship
-6. **Methodology**: If applicable, describe research methods, data collection, and analytical approaches
-7. **Key Findings/Results**: Present the primary outcomes and evidence
-8. **Discussion**: Interpret findings, address implications, limitations, and connections to broader field
-9. **Conclusion**: Synthesize main points and suggest directions for future research
-10. **References**: Complete list of all cited works
+2. **Abstract**: Brief summary (100-150 words) of the report's purpose, methods, and key findings
+3. **Introduction**: Present the topic, research question/problem, significance, and outline of the report
+4. **Background/Literature Review**: Contextualize the topic within existing scholarship
+5. **Methodology**: If applicable, describe research methods, data collection, and analytical approaches
+6. **Key Findings/Results**: Present the primary outcomes and evidence
+7. **Discussion**: Interpret findings, address implications, limitations, and connections to broader field
+8. **Conclusion**: Synthesize main points and suggest directions for future research
+9. **References**: Complete list of all cited works
 
 ## ACADEMIC WRITING GUIDELINES:
 - Maintain formal, precise, and objective language throughout
@@ -485,8 +484,6 @@ Generate a comprehensive academic report that meets the highest standards of sch
     
     enhanced_prompt = f"""
 {prompt}
-
-IMPORTANT: In your report, make sure to include a "User Prompt" section right after the title that displays the original research question: "{original_prompt}"
 """
     
     messages = [
@@ -714,7 +711,6 @@ def assemble_report_parallel(section_results: Dict[str, str], research_data: str
     # Assemble sections in order
     report_sections = [
         f"# {title}\n",
-        f"## User Prompt\n{prompt}\n",
         f"## Abstract\n{section_results.get('abstract', '')}\n",
         f"## Introduction\n{section_results.get('introduction', '')}\n", 
         f"## Background/Literature Review\n{section_results.get('background', '')}\n",
