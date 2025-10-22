@@ -283,7 +283,7 @@ def tavily_search_tool(
 
     Args:
         query (str): The search query.
-        max_results (int): Number of results to return (default 10).
+        max_results (int): Number of results to return (default 20).
         include_images (bool): Whether to include image results.
 
     Returns:
