@@ -338,8 +338,9 @@
     .header-center {
       display: flex;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
       flex: 1;
+      margin-left: 13rem;
     }
 
     .brand-section {
@@ -1781,11 +1782,16 @@
     }
 
     .main-subtitle {
-      font-size: 0.85rem;
+      font-size: 1.1rem;
       color: var(--text-secondary);
       margin: 0;
       line-height: 1.4;
       text-align: left;
+    }
+
+    .main-subtitle .external-highlight {
+      color: var(--dewalt-yellow);
+      font-weight: 600;
     }
 
     .templates-section {
@@ -1938,6 +1944,7 @@
       display: flex;
       gap: 0.5rem;
     }
+
 
     .voice-btn, .submit-btn {
       width: 40px;
@@ -2127,7 +2134,7 @@
           </div>
           <div class="header-text">
             <h1 class="main-title">Start Your Research</h1>
-            <p class="main-subtitle">Ask any research question and get comprehensive, AI-powered insights from multiple EXTERNAL <em>only</em> sources</p>
+            <p class="main-subtitle">Ask any research question and get comprehensive, AI-powered insights from multiple <span class="external-highlight">EXTERNAL only</span> sources</p>
           </div>
         </div>
 
@@ -2188,6 +2195,7 @@
               </button>
             </div>
           </div>
+          
         </div>
       </div>
     </div> <!-- End main-content -->
@@ -2631,8 +2639,9 @@ const renderedSteps = new Map();
       bootstrap.Modal.getInstance(document.getElementById('voiceInputModal')).hide();
     }
 
+
     // Main research submission function
-async function submitPrompt() {
+    async function submitPrompt() {
       const prompt = document.getElementById('promptInput').value.trim();
       if (!prompt) {
         alert('Please enter a research question');

@@ -496,7 +496,7 @@ IMPORTANT: In your report, make sure to include a "User Prompt" section right af
 
     def _call(messages_):
         resp = client.chat.completions.create(
-            model=os.getenv("AZURE_OPENAI_DEPLOYMENT", "sbd-gpt-4.1-mini"),
+            model=os.getenv("AZURE_OPENAI_DEPLOYMENT", "sbd-o3-mini-0131"),
             messages=messages_,
             max_completion_tokens=max_completion_tokens,
         )
