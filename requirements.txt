@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+python-dotenv
+jinja2
+openai
+tavily-python
+wikipedia
+requests
+docstring_parser
+
+# Azure Cosmos DB
+azure-cosmos
+
+# Core
+pdfminer.six
+pymupdf           # optional but recommended for faster/better PDF text extraction
