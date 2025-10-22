@@ -152,7 +152,7 @@ from io import BytesIO
 
 def arxiv_search_tool(
     query: str,
-    max_results: int = 3,
+    max_results: int = 20,
 ) -> List[Dict]:
     """
     Search arXiv and return results with `summary` overwritten
@@ -257,7 +257,7 @@ arxiv_tool_def = {
             "type": "object",
             "properties": {
                 "query": {"type": "string", "description": "Search keywords."},
-                "max_results": {"type": "integer", "default": 3},
+                "max_results": {"type": "integer", "default": 20},
             },
             "required": ["query"],
         },
@@ -276,7 +276,7 @@ load_dotenv()  # Loads environment variables from a .env file
 
 
 def tavily_search_tool(
-    query: str, max_results: int = 10, include_images: bool = False
+    query: str, max_results: int = 20, include_images: bool = False
 ) -> list[dict]:
     """
     Perform a search using the Tavily API.

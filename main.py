@@ -21,7 +21,7 @@ from src.cosmos_db import get_cosmos_service, CosmosDBService
 import html, textwrap
 import markdown
 from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.lib import colors
@@ -506,18 +506,46 @@ def generate_pdf(request: dict):
         # Build the story
         story = []
         
-        # Add title
-        story.append(Paragraph("Research Report", title_style))
+        # Create header with logo and title side by side
+        try:
+            logo_path = "static/beacon-research-agent-logo.png"
+            if os.path.exists(logo_path):
+                # Load logo and get its natural dimensions to maintain aspect ratio
+                logo = Image(logo_path)
+                # Scale logo to reasonable size while maintaining aspect ratio
+                # Set max height to 1 inch, width will scale proportionally
+                logo.drawHeight = 1*inch
+                logo.drawWidth = logo.drawHeight * (logo.imageWidth / logo.imageHeight)
+                
+                # Create a table with logo on left and title on right
+                header_data = [
+                    [logo, Paragraph("Research Report", title_style)]
+                ]
+                header_table = Table(header_data, colWidths=[2.5*inch, 4*inch])
+                header_table.setStyle(TableStyle([
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                    ('LEFTPADDING', (0, 0), (0, 0), 0),
+                    ('RIGHTPADDING', (0, 0), (0, 0), 0),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+                    ('TOPPADDING', (0, 0), (-1, -1), 0),
+                ]))
+                story.append(header_table)
+            else:
+                # If no logo, just add title
+                story.append(Paragraph("Research Report", title_style))
+        except Exception as e:
+            print(f"Warning: Could not add logo to PDF: {e}")
+            # Fallback to just title if logo fails
+            story.append(Paragraph("Research Report", title_style))
+        
         story.append(Spacer(1, 20))
         
         # Add date
         story.append(Paragraph(f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", body_style))
         story.append(Spacer(1, 20))
         
-        # Add original prompt if provided
+        # Add original prompt if provided (clean, single display)
         if original_prompt:
-            story.append(Paragraph("Original Research Question", heading_style))
-            story.append(Spacer(1, 12))
             # Sanitize the prompt text to avoid PDF generation issues
             sanitized_prompt = html.escape(original_prompt) if original_prompt else ""
             story.append(Paragraph(sanitized_prompt, body_style))
@@ -525,10 +553,24 @@ def generate_pdf(request: dict):
         
         # Process the markdown content directly (better than HTML conversion)
         lines = markdown_content.split('\n')
+        skip_user_prompt_section = False
+        
         for line in lines:
             line = line.strip()
             if not line:
                 story.append(Spacer(1, 6))
+                continue
+            
+            # Skip User Prompt sections to avoid repetition
+            if line.lower().startswith('## user prompt') or line.lower().startswith('# user prompt'):
+                skip_user_prompt_section = True
+                continue
+            elif line.startswith('##') and not line.lower().startswith('## user prompt'):
+                skip_user_prompt_section = False
+            elif line.startswith('#') and not line.lower().startswith('# user prompt'):
+                skip_user_prompt_section = False
+            
+            if skip_user_prompt_section:
                 continue
                 
             # Handle markdown headers
