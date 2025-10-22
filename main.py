@@ -6,7 +6,7 @@ import threading
 from datetime import datetime
 from typing import Optional, Literal
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,50 +16,68 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 from dotenv import load_dotenv
 
 from src.planning_agent import planner_agent, executor_agent_step
+from src.cosmos_db import get_cosmos_service, CosmosDBService
 
 import html, textwrap
+import markdown
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.lib import colors
+from io import BytesIO
 
 # === Load env vars ===
 load_dotenv()
 
 # API keys are loaded from .env file via load_dotenv() above
 
+# Database configuration
+USE_COSMOS_DB = os.getenv("USE_COSMOS_DB", "true").lower() == "true"
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./research_agent.db")
 
-# SQLite database configuration
+# Initialize database service
+db_service = None
+if USE_COSMOS_DB:
+    try:
+        db_service = get_cosmos_service()
+        print("Using Cosmos DB for data storage")
+    except Exception as e:
+        print(f"Failed to initialize Cosmos DB: {e}")
+        print("Falling back to SQLite")
+        USE_COSMOS_DB = False
 
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL not set")
-
-
-# === DB setup ===
-Base = declarative_base()
-engine = create_engine(DATABASE_URL, echo=False, future=True)
-SessionLocal = sessionmaker(bind=engine)
-
-
-class Task(Base):
-    __tablename__ = "tasks"
-    id = Column(String, primary_key=True, index=True)
-    prompt = Column(Text)
-    status = Column(String)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow)
-    result = Column(Text)
-    # New fields for chat history
-    title = Column(String)  # Auto-generated title from prompt
-    final_report = Column(Text)  # Store the final markdown report separately
+# SQLite database configuration (fallback)
+if not USE_COSMOS_DB:
+    if not DATABASE_URL:
+        raise RuntimeError("DATABASE_URL not set")
+    
+    Base = declarative_base()
+    engine = create_engine(DATABASE_URL, echo=False, future=True)
+    SessionLocal = sessionmaker(bind=engine)
 
 
-try:
-    Base.metadata.drop_all(bind=engine)
-except Exception as e:
-    print(f"ERROR: DB creation failed: {e}")
+# SQLite Task model (for fallback)
+if not USE_COSMOS_DB:
+    class Task(Base):
+        __tablename__ = "tasks"
+        id = Column(String, primary_key=True, index=True)
+        prompt = Column(Text)
+        status = Column(String)
+        created_at = Column(DateTime, default=datetime.utcnow)
+        updated_at = Column(DateTime, default=datetime.utcnow)
+        result = Column(Text)
 
-try:
-    Base.metadata.create_all(bind=engine)
-except Exception as e:
-    print(f"ERROR: DB creation failed: {e}")
+    # Initialize SQLite database
+    try:
+        Base.metadata.drop_all(bind=engine)
+    except Exception as e:
+        print(f"ERROR: DB drop failed: {e}")
+
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        print(f"ERROR: DB creation failed: {e}")
 
 # === FastAPI ===
 app = FastAPI()
@@ -74,6 +92,8 @@ task_progress = {}
 
 class PromptRequest(BaseModel):
     prompt: str
+    advanced_options: dict = None
+    session_id: str = None
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -89,10 +109,20 @@ def health_check(request: Request):
 @app.post("/generate_report")
 def generate_report(req: PromptRequest):
     task_id = str(uuid.uuid4())
-    db = SessionLocal()
-    db.add(Task(id=task_id, prompt=req.prompt, status="running"))
-    db.commit()
-    db.close()
+    
+    # Create task in database
+    if USE_COSMOS_DB and db_service:
+        try:
+            db_service.create_task(task_id=task_id, prompt=req.prompt, status="running")
+        except Exception as e:
+            print(f"Error creating task in Cosmos DB: {e}")
+            return {"error": "Failed to create task"}
+    else:
+        # Fallback to SQLite
+        db = SessionLocal()
+        db.add(Task(id=task_id, prompt=req.prompt, status="running"))
+        db.commit()
+        db.close()
 
     task_progress[task_id] = {"steps": []}
     initial_plan_steps = planner_agent(req.prompt)
@@ -106,8 +136,11 @@ def generate_report(req: PromptRequest):
             }
         )
 
+    # Get session_id from request if available
+    session_id = getattr(req, 'session_id', None)
+
     thread = threading.Thread(
-        target=run_agent_workflow, args=(task_id, req.prompt, initial_plan_steps)
+        target=run_agent_workflow, args=(task_id, req.prompt, initial_plan_steps, req.advanced_options, session_id)
     )
     thread.start()
     return {"task_id": task_id}
@@ -120,76 +153,102 @@ def get_task_progress(task_id: str):
 
 @app.get("/task_status/{task_id}")
 def get_task_status(task_id: str):
-    db = SessionLocal()
-    task = db.query(Task).filter(Task.id == task_id).first()
-    db.close()
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-    return {
-        "status": task.status,
-        "result": json.loads(task.result) if task.result else None,
-    }
+    if USE_COSMOS_DB and db_service:
+        try:
+            task = db_service.get_task(task_id)
+            if not task:
+                raise HTTPException(status_code=404, detail="Task not found")
+            return {
+                "status": task.get("status"),
+                "result": json.loads(task.get("result")) if task.get("result") else None,
+            }
+        except Exception as e:
+            print(f"Error getting task from Cosmos DB: {e}")
+            raise HTTPException(status_code=500, detail="Database error")
+    else:
+        # Fallback to SQLite
+        db = SessionLocal()
+        task = db.query(Task).filter(Task.id == task_id).first()
+        db.close()
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        return {
+            "status": task.status,
+            "result": json.loads(task.result) if task.result else None,
+        }
 
 
-@app.get("/chat_history")
-def get_chat_history():
-    """Get all completed tasks for chat history"""
-    db = SessionLocal()
-    tasks = db.query(Task).filter(Task.status == "done").order_by(Task.created_at.desc()).all()
-    db.close()
+# === Chat History Endpoints ===
+
+@app.post("/chat/session")
+def create_chat_session(req: PromptRequest):
+    """Create a new chat session"""
+    if not USE_COSMOS_DB or not db_service:
+        raise HTTPException(status_code=503, detail="Chat history not available - using SQLite mode")
     
-    history = []
-    for task in tasks:
-        # Generate title from prompt if not set
-        title = task.title or generate_title_from_prompt(task.prompt)
+    try:
+        session_id = db_service.create_chat_session(user_prompt=req.prompt)
+        return {"session_id": session_id}
+    except Exception as e:
+        print(f"Error creating chat session: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create chat session")
+
+
+@app.get("/chat/session/{session_id}")
+def get_chat_session(session_id: str):
+    """Get a chat session and its messages"""
+    if not USE_COSMOS_DB or not db_service:
+        raise HTTPException(status_code=503, detail="Chat history not available - using SQLite mode")
+    
+    try:
+        session = db_service.get_chat_session(session_id)
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
         
-        history.append({
-            "id": task.id,
-            "title": title,
-            "prompt": task.prompt,
-            "created_at": task.created_at.isoformat(),
-            "has_report": bool(task.final_report)
-        })
-    
-    return {"history": history}
+        messages = db_service.get_chat_messages(session_id)
+        return {
+            "session": session,
+            "messages": messages
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error getting chat session: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get chat session")
 
 
-@app.get("/chat_history/{task_id}")
-def get_chat_history_item(task_id: str):
-    """Get specific chat history item with full report"""
-    db = SessionLocal()
-    task = db.query(Task).filter(Task.id == task_id).first()
-    db.close()
+@app.get("/chat/sessions")
+def get_all_chat_sessions():
+    """Get all chat sessions"""
+    if not USE_COSMOS_DB or not db_service:
+        raise HTTPException(status_code=503, detail="Chat history not available - using SQLite mode")
     
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-    
-    title = task.title or generate_title_from_prompt(task.prompt)
-    
-    return {
-        "id": task.id,
-        "title": title,
-        "prompt": task.prompt,
-        "created_at": task.created_at.isoformat(),
-        "final_report": task.final_report,
-        "status": task.status
-    }
+    try:
+        sessions = db_service.get_all_sessions()
+        return {"sessions": sessions}
+    except Exception as e:
+        print(f"Error getting chat sessions: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get chat sessions")
 
 
-def generate_title_from_prompt(prompt: str) -> str:
-    """Generate a short title from the prompt"""
-    if not prompt:
-        return "Untitled Research"
+class MessageRequest(BaseModel):
+    message_type: str
+    content: str
+
+@app.post("/chat/session/{session_id}/message")
+def add_chat_message(session_id: str, req: MessageRequest):
+    """Add a message to a chat session"""
+    if not USE_COSMOS_DB or not db_service:
+        raise HTTPException(status_code=503, detail="Chat history not available - using SQLite mode")
     
-    # Take first 50 characters and clean up
-    title = prompt.strip()[:50]
-    if len(prompt) > 50:
-        title += "..."
-    
-    # Remove newlines and extra spaces
-    title = " ".join(title.split())
-    
-    return title or "Untitled Research"
+    try:
+        message_id = db_service.add_message(session_id, req.message_type, req.content)
+        return {"message_id": message_id}
+    except Exception as e:
+        print(f"Error adding message: {e}")
+        raise HTTPException(status_code=500, detail="Failed to add message")
+
+
 
 
 def format_history(history):
@@ -232,7 +291,10 @@ def format_history_html(history):
     return "".join(formatted)
 
 
-def run_agent_workflow(task_id: str, prompt: str, initial_plan_steps: list):
+def run_agent_workflow(task_id: str, prompt: str, initial_plan_steps: list, advanced_options: dict = None, session_id: str = None):
+    # Store session_id for later use
+    run_agent_workflow.current_session_id = session_id
+    
     steps_data = task_progress[task_id]["steps"]
     execution_history = []
 
@@ -250,7 +312,7 @@ def run_agent_workflow(task_id: str, prompt: str, initial_plan_steps: list):
             update_step_status(i, "running", f"Executing: {plan_step_title}")
 
             actual_step_description, agent_name, output = executor_agent_step(
-                plan_step_title, execution_history, prompt
+                plan_step_title, execution_history, prompt, advanced_options
             )
 
             execution_history.append([plan_step_title, actual_step_description, output])
@@ -278,7 +340,7 @@ def run_agent_workflow(task_id: str, prompt: str, initial_plan_steps: list):
 {format_history_html(execution_history[-2:-1])}
   </div>
 
-  <div style='font-weight:bold; color:#f59e0b; margin-top:8px;'>Your next task</div>
+  <div style='font-weight:bold; color:#2563eb; margin-top:8px;'>Your next task</div>
   <div style='white-space:pre-wrap; color:#000000;'>{actual_step_description}</div>
 
   <div style='font-weight:bold; color:#10b981; margin-top:8px;'>Output</div>
@@ -297,15 +359,39 @@ def run_agent_workflow(task_id: str, prompt: str, initial_plan_steps: list):
 
         result = {"html_report": final_report_markdown, "history": steps_data}
 
-        db = SessionLocal()
-        task = db.query(Task).filter(Task.id == task_id).first()
-        task.status = "done"
-        task.result = json.dumps(result)
-        task.final_report = final_report_markdown  # Store final report separately
-        task.title = generate_title_from_prompt(prompt)  # Generate and store title
-        task.updated_at = datetime.utcnow()
-        db.commit()
-        db.close()
+        # Update task in database
+        if USE_COSMOS_DB and db_service:
+            try:
+                db_service.update_task(task_id=task_id, status="done", result=json.dumps(result))
+                
+                # Save final report to chat session if session exists
+                if hasattr(run_agent_workflow, 'current_session_id') and run_agent_workflow.current_session_id:
+                    try:
+                        db_service.add_message(
+                            session_id=run_agent_workflow.current_session_id,
+                            message_type="assistant",
+                            content=final_report_markdown,
+                            metadata={
+                                "task_id": task_id,
+                                "report_type": "final_research_report",
+                                "workflow_completed": True
+                            }
+                        )
+                        print(f"Final report saved to chat session: {run_agent_workflow.current_session_id}")
+                    except Exception as e:
+                        print(f"Error saving final report to chat session: {e}")
+                        
+            except Exception as e:
+                print(f"Error updating task in Cosmos DB: {e}")
+        else:
+            # Fallback to SQLite
+            db = SessionLocal()
+            task = db.query(Task).filter(Task.id == task_id).first()
+            task.status = "done"
+            task.result = json.dumps(result)
+            task.updated_at = datetime.utcnow()
+            db.commit()
+            db.close()
 
     except Exception as e:
         print(f"Workflow error for task {task_id}: {e}")
@@ -322,9 +408,186 @@ def run_agent_workflow(task_id: str, prompt: str, initial_plan_steps: list):
                     {"title": "Error", "content": str(e)},
                 )
 
-        db = SessionLocal()
-        task = db.query(Task).filter(Task.id == task_id).first()
-        task.status = "error"
-        task.updated_at = datetime.utcnow()
-        db.commit()
-        db.close()
+        # Update task status to error
+        if USE_COSMOS_DB and db_service:
+            try:
+                db_service.update_task(task_id=task_id, status="error")
+            except Exception as e:
+                print(f"Error updating task status in Cosmos DB: {e}")
+        else:
+            # Fallback to SQLite
+            db = SessionLocal()
+            task = db.query(Task).filter(Task.id == task_id).first()
+            task.status = "error"
+            task.updated_at = datetime.utcnow()
+            db.commit()
+            db.close()
+
+
+@app.post("/generate_pdf")
+def generate_pdf(request: dict):
+    """Generate PDF from markdown content"""
+    try:
+        markdown_content = request.get("content", "")
+        pdf_type = request.get("type", "report")  # "report"
+        original_prompt = request.get("original_prompt", "")
+        
+        print(f"PDF Generation Debug - Type: {pdf_type}, Content length: {len(markdown_content)}, Prompt length: {len(original_prompt)}")
+        
+        if not markdown_content:
+            raise HTTPException(status_code=400, detail="No content provided")
+        
+        # Limit content size to prevent memory issues
+        if len(markdown_content) > 1000000:  # 1MB limit
+            raise HTTPException(status_code=400, detail="Content too large for PDF generation")
+        
+        # For "report" type, extract content from Abstract onwards
+        if pdf_type == "report":
+            # Extract content from Abstract to References (same logic as client-side)
+            lines = markdown_content.split('\n')
+            start_index = -1
+            end_index = -1
+            
+            for i, line in enumerate(lines):
+                if line.strip().lower().startswith('## abstract'):
+                    start_index = i
+                    break
+            
+            for i in range(len(lines) - 1, -1, -1):
+                if lines[i].strip().lower().startswith('## references'):
+                    for j in range(i + 1, len(lines)):
+                        if lines[j].strip().startswith('##') and lines[j].strip() != '## References':
+                            end_index = j
+                            break
+                    if end_index == -1:
+                        end_index = len(lines)
+                    break
+            
+            if start_index != -1 and end_index != -1:
+                markdown_content = '\n'.join(lines[start_index:end_index])
+        
+        # Convert markdown to HTML first
+        html_content = markdown.markdown(markdown_content)
+        
+        # Create PDF using ReportLab
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
+        
+        # Get styles
+        styles = getSampleStyleSheet()
+        
+        # Create custom styles
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=16,
+            spaceAfter=30,
+            alignment=1,  # Center alignment
+            textColor=colors.darkblue
+        )
+        
+        heading_style = ParagraphStyle(
+            'CustomHeading',
+            parent=styles['Heading2'],
+            fontSize=14,
+            spaceAfter=12,
+            spaceBefore=12,
+            textColor=colors.darkblue
+        )
+        
+        body_style = ParagraphStyle(
+            'CustomBody',
+            parent=styles['Normal'],
+            fontSize=10,
+            spaceAfter=6,
+            leading=12
+        )
+        
+        # Build the story
+        story = []
+        
+        # Add title
+        story.append(Paragraph("Research Report", title_style))
+        story.append(Spacer(1, 20))
+        
+        # Add date
+        story.append(Paragraph(f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", body_style))
+        story.append(Spacer(1, 20))
+        
+        # Add original prompt if provided
+        if original_prompt:
+            story.append(Paragraph("Original Research Question", heading_style))
+            story.append(Spacer(1, 12))
+            # Sanitize the prompt text to avoid PDF generation issues
+            sanitized_prompt = html.escape(original_prompt) if original_prompt else ""
+            story.append(Paragraph(sanitized_prompt, body_style))
+            story.append(Spacer(1, 20))
+        
+        # Process the markdown content directly (better than HTML conversion)
+        lines = markdown_content.split('\n')
+        for line in lines:
+            line = line.strip()
+            if not line:
+                story.append(Spacer(1, 6))
+                continue
+                
+            # Handle markdown headers
+            if line.startswith('# '):
+                text = line.replace('# ', '')
+                story.append(Paragraph(text, title_style))
+            elif line.startswith('## '):
+                text = line.replace('## ', '')
+                story.append(Paragraph(text, heading_style))
+            elif line.startswith('### '):
+                text = line.replace('### ', '')
+                story.append(Paragraph(text, heading_style))
+            elif line.startswith('#### '):
+                text = line.replace('#### ', '')
+                story.append(Paragraph(text, heading_style))
+            elif line.startswith('##### ') or line.startswith('###### '):
+                text = line.replace('##### ', '').replace('###### ', '')
+                story.append(Paragraph(text, heading_style))
+            elif line.startswith('- ') or line.startswith('* '):
+                text = line.replace('- ', '• ').replace('* ', '• ')
+                text = html.unescape(text)
+                story.append(Paragraph(text, body_style))
+            elif line.startswith('1. ') or line.startswith('2. ') or line.startswith('3. '):
+                text = line
+                text = html.unescape(text)
+                story.append(Paragraph(text, body_style))
+            else:
+                # Regular text
+                if line:
+                    text = html.unescape(line)
+                    story.append(Paragraph(text, body_style))
+        
+        # Build PDF
+        doc.build(story)
+        
+        # Get PDF content
+        buffer.seek(0)
+        pdf_content = buffer.getvalue()
+        buffer.close()
+        
+        # Return PDF as response with proper headers
+        timestamp = datetime.now().strftime("%Y-%m-%d")
+        filename = f"Research_Report_{timestamp}.pdf"
+        return Response(
+            content=pdf_content,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename=\"{filename}\"",
+                "Content-Type": "application/pdf",
+                "Cache-Control": "no-cache"
+            }
+        )
+        
+    except Exception as e:
+        print(f"Error generating PDF: {e}")
+        import traceback
+        traceback.print_exc()
+        # Return more detailed error information for debugging
+        error_detail = f"Error generating PDF: {str(e)}"
+        if hasattr(e, '__traceback__'):
+            error_detail += f"\nTraceback: {traceback.format_exc()}"
+        raise HTTPException(status_code=500, detail=error_detail)

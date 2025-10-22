@@ -9,6 +9,13 @@ wikipedia
 requests
 docstring_parser
 
+# Azure Cosmos DB
+azure-cosmos
+
 # Core
 pdfminer.six
 pymupdf           # optional but recommended for faster/better PDF text extraction
+
+# PDF Generation
+reportlab
+markdown

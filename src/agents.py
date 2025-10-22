@@ -61,6 +61,15 @@ You are an advanced research assistant with expertise in information retrieval a
 5. **Synthesize Findings**: Organize information logically with clear source attribution
 6. **Document Search Process**: Note which tools were used and why
 
+## MANDATORY RESEARCH SEQUENCE:
+
+**STEP 1: ALWAYS start with Wikipedia search** to establish foundational knowledge and context
+**STEP 2: Use Tavily search** for recent developments and current information
+**STEP 3: Use arXiv search** for academic/scientific papers (when applicable)
+**STEP 4: Synthesize** all sources for comprehensive understanding
+
+**CRITICAL**: Never skip the Wikipedia step - it provides essential background that makes subsequent searches more effective and comprehensive.
+
 ## TOOL SELECTION GUIDELINES:
 
 - For scientific/academic questions in supported domains -> Use `arxiv_search_tool`
@@ -69,6 +78,28 @@ You are an advanced research assistant with expertise in information retrieval a
 - For comprehensive research -> Use multiple tools strategically
 - NEVER use `arxiv_search_tool` for domains outside its supported list
 - ALWAYS verify information across multiple sources when possible
+
+## MANDATORY WIKIPEDIA USAGE:
+
+**ALWAYS use Wikipedia search tool when:**
+- Researching any topic that requires background knowledge or foundational understanding
+- The topic involves historical context, definitions, or basic concepts
+- You need to establish context before diving into specific research
+- The research question involves well-known subjects, people, places, or events
+- You're researching any topic that would benefit from encyclopedia-style overview
+
+**Examples of when Wikipedia MUST be used:**
+- "Latest developments in AI" → Start with Wikipedia for AI background
+- "Quantum computing trends" → Use Wikipedia for quantum computing basics
+- "Renewable energy research" → Wikipedia for renewable energy overview
+- "Market analysis of Tesla" → Wikipedia for Tesla company background
+- Any research involving established concepts, companies, technologies, or fields
+
+**Research Strategy:**
+1. **Start with Wikipedia** for foundational knowledge and context
+2. **Use Tavily** for recent developments and current information  
+3. **Use arXiv** for academic/scientific papers (when applicable)
+4. **Synthesize** all sources for comprehensive understanding
 
 ## OUTPUT FORMAT:
 
@@ -141,18 +172,18 @@ USER RESEARCH REQUEST:
             "type": "function",
             "function": {
                 "name": "wikipedia_search_tool",
-                "description": "Search Wikipedia for a summary of the given query",
+                "description": "Search Wikipedia for foundational knowledge, background information, definitions, and historical context. ESSENTIAL for establishing basic understanding of any topic before diving into specific research.",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "query": {
                             "type": "string",
-                            "description": "Search query for Wikipedia"
+                            "description": "Search query for Wikipedia - use broad terms to get comprehensive overview"
                         },
                         "sentences": {
                             "type": "integer",
-                            "description": "Number of sentences to include in the summary",
-                            "default": 5
+                            "description": "Number of sentences to include in the summary (5-10 recommended for comprehensive overview)",
+                            "default": 8
                         }
                     },
                     "required": ["query"]
@@ -163,7 +194,7 @@ USER RESEARCH REQUEST:
 
     try:
         resp = client.chat.completions.create(
-            model=os.getenv("AZURE_OPENAI_DEPLOYMENT", "sbd-gpt-4.1-mini"),
+            model=os.getenv("AZURE_OPENAI_DEPLOYMENT", "sbd-o3-mini-0131"),
             messages=messages,
             tools=tools,
             tool_choice="auto",
@@ -210,33 +241,44 @@ USER RESEARCH REQUEST:
 
         # Add tool results to content
         if tool_results:
-            tools_html = "<h2 style='font-size:1.5em; color:#2563eb;'>Research Results</h2>"
+            tools_html = "<h2>Research Results</h2>"
             for tr in tool_results:
-                # Make Tavily results more prominent
-                if tr['tool_name'] == 'tavily_search_tool':
-                    tools_html += f"<h3 style='color:#1e40af; background:#e0f2fe; padding:8px; border-radius:5px;'>🌐 {tr['tool_name'].replace('_', ' ').title()} - Web Search Results</h3>"
-                else:
-                    tools_html += f"<h3 style='color:#1e40af;'>{tr['tool_name'].replace('_', ' ').title()}</h3>"
+                tools_html += f"<h3>{tr['tool_name'].replace('_', ' ').title()}</h3>"
+                tools_html += f"<p><strong>Query:</strong> {tr['args']}</p>"
                 
-                tools_html += f"<p style='color:#000000;'><strong>Query:</strong> {tr['args']}</p>"
-                
-                # Format Tavily results better
+                # Format Tavily results in simple table format
                 if tr['tool_name'] == 'tavily_search_tool' and isinstance(tr['result'], list):
-                    tools_html += "<div style='background:#f0f9ff; padding:15px; border-radius:8px; border-left:4px solid #0ea5e9;'>"
-                    for i, result in enumerate(tr['result'][:5], 1):  # Show first 5 results
+                    tools_html += "<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>"
+                    tools_html += "<tr><th>#</th><th>Title</th><th>Content</th><th>URL</th></tr>"
+                    for i, result in enumerate(tr['result'][:10], 1):  # Show first 10 results
                         if isinstance(result, dict) and 'title' in result:
-                            tools_html += f"""
-                            <div style='margin-bottom:12px; padding:10px; background:white; border-radius:5px; border:1px solid #e0f2fe; color:#000000;'>
-                                <h4 style='color:#0369a1; margin:0 0 5px 0;'>{i}. {result.get('title', 'No title')}</h4>
-                                <p style='margin:5px 0; color:#000000; font-size:0.9em;'>{result.get('content', 'No content')[:200]}{'...' if len(result.get('content', '')) > 200 else ''}</p>
-                                <a href='{result.get('url', '#')}' target='_blank' style='color:#0ea5e9; text-decoration:none; font-size:0.8em;'>🔗 View Source</a>
-                            </div>
-                            """
-                    tools_html += "</div>"
+                            title = result.get('title', 'No title')
+                            content_text = result.get('content', 'No content')[:200]
+                            if len(result.get('content', '')) > 200:
+                                content_text += '...'
+                            url = result.get('url', '#')
+                            tools_html += f"<tr><td>{i}</td><td>{title}</td><td>{content_text}</td><td><a href='{url}' target='_blank'>View Source</a></td></tr>"
+                    tools_html += "</table>"
+                # Format arXiv results in simple table format
+                elif tr['tool_name'] == 'arxiv_search_tool' and isinstance(tr['result'], list):
+                    tools_html += "<table border='1' cellpadding='5' cellspacing='0' style='border-collapse: collapse; width: 100%;'>"
+                    tools_html += "<tr><th>#</th><th>Title</th><th>Authors</th><th>Published</th><th>Summary</th><th>URL</th><th>PDF</th></tr>"
+                    for i, result in enumerate(tr['result'][:10], 1):  # Show first 10 results
+                        if isinstance(result, dict) and 'title' in result:
+                            title = result.get('title', 'No title')
+                            authors = ', '.join(result.get('authors', []))[:100]
+                            if len(', '.join(result.get('authors', []))) > 100:
+                                authors += '...'
+                            published = result.get('published', 'N/A')
+                            summary = result.get('summary', 'No summary')[:200]
+                            if len(result.get('summary', '')) > 200:
+                                summary += '...'
+                            url = result.get('url', '#')
+                            pdf_url = result.get('link_pdf', '#')
+                            tools_html += f"<tr><td>{i}</td><td>{title}</td><td>{authors}</td><td>{published}</td><td>{summary}</td><td><a href='{url}' target='_blank'>View Paper</a></td><td><a href='{pdf_url}' target='_blank'>PDF</a></td></tr>"
+                    tools_html += "</table>"
                 else:
-                    tools_html += f"<div style='background:#f8fafc; padding:10px; border-radius:5px; color:#000000;'>"
-                    tools_html += f"<pre style='color:#000000;'>{str(tr['result'])[:1000]}{'...' if len(str(tr['result'])) > 1000 else ''}</pre>"
-                    tools_html += "</div>"
+                    tools_html += f"<pre>{str(tr['result'])[:1000]}{'...' if len(str(tr['result'])) > 1000 else ''}</pre>"
                 tools_html += "<br>"
             content += "\n\n" + tools_html
 
@@ -253,14 +295,143 @@ def writer_agent(
     model: str = "azure:gpt-4",
     min_words_total: int = 2400,
     min_words_per_section: int = 400,
-    max_tokens: int = 15000,
+    max_completion_tokens: int = 15000,
     retries: int = 1,
+    advanced_options: dict = None,
 ):
     print("==================================")
     print("Writer Agent")
     print("==================================")
 
-    system_message = """
+    # Get report format from advanced options
+    report_format = "academic"  # default
+    if advanced_options and "reportFormat" in advanced_options:
+        report_format = advanced_options["reportFormat"]
+
+    # Format-specific system messages
+    def get_system_message(format_type: str) -> str:
+        if format_type == "executive":
+            return """
+You are an expert business writer specializing in executive summaries. Your task is to synthesize research materials into a concise, high-level executive summary that provides key insights and actionable recommendations for business leaders.
+
+## EXECUTIVE SUMMARY REQUIREMENTS:
+- Produce a COMPLETE, POLISHED executive summary in Markdown format
+- Focus on business impact, strategic implications, and actionable insights
+- Length should be concise but comprehensive (typically 800-1200 words)
+- Use clear, jargon-free language accessible to non-technical executives
+
+## MANDATORY STRUCTURE:
+1. **Title**: Clear, business-focused title
+2. **Executive Summary**: Brief overview (100-150 words) highlighting key findings and business implications
+3. **Key Findings**: 3-5 bullet points of the most important discoveries
+4. **Business Impact**: Analysis of how findings affect business operations, strategy, or market position
+5. **Strategic Recommendations**: 3-5 actionable recommendations for leadership
+6. **Risk Assessment**: Key risks and opportunities identified
+7. **Next Steps**: Immediate actions and timeline for implementation
+8. **References**: Key sources and data points
+
+## EXECUTIVE WRITING GUIDELINES:
+- Use clear, concise language suitable for C-level executives
+- Focus on business value and strategic implications
+- Include specific metrics, percentages, and quantifiable impacts where possible
+- Highlight competitive advantages and market opportunities
+- Address potential challenges and mitigation strategies
+- Provide actionable recommendations with clear timelines
+
+## FORMATTING GUIDELINES:
+- Use bullet points and numbered lists for clarity
+- Include executive-friendly charts and visual elements when specified
+- leverage table format to summarize key findings, comparisons where needed/appropriate
+- Use professional business terminology
+- Structure for quick scanning and decision-making
+- Include call-out boxes for critical information
+
+Generate a comprehensive executive summary that enables informed decision-making at the highest levels.
+"""
+
+        elif format_type == "technical":
+            return """
+You are an expert technical writer with deep knowledge of engineering and scientific communication. Your task is to synthesize research materials into a comprehensive technical report suitable for engineers, researchers, and technical professionals.
+
+## TECHNICAL REPORT REQUIREMENTS:
+- Produce a COMPLETE, POLISHED technical report in Markdown format
+- Focus on technical specifications, methodologies, and detailed analysis
+- Length should be comprehensive (typically 2000-4000 words)
+- Use precise technical language with appropriate terminology
+
+## MANDATORY STRUCTURE:
+1. **Title**: Clear, technical title describing the subject
+2. **Abstract**: Technical summary (150-200 words) of objectives, methods, and key findings
+3. **Introduction**: Technical background, problem statement, and objectives
+4. **Technical Background**: Detailed technical context and literature review
+5. **Methodology**: Detailed technical methods, tools, and procedures used
+6. **Technical Analysis**: In-depth analysis of technical aspects, data, and results
+7. **Technical Discussion**: Interpretation of technical findings and implications
+8. **Technical Recommendations**: Specific technical recommendations and implementation details
+9. **Technical Specifications**: Detailed technical requirements and specifications
+10. **References**: Complete technical references and sources
+
+## TECHNICAL WRITING GUIDELINES:
+- Use precise technical terminology and specifications
+- Include detailed technical analysis and methodologies
+- Provide technical specifications and requirements
+- Include technical diagrams, charts, and visual elements when specified
+- Focus on technical accuracy and precision
+- Address technical challenges and solutions
+- Include technical implementation details
+
+## FORMATTING GUIDELINES:
+- Use technical formatting with proper equations and formulas
+- Include technical diagrams and specifications
+- Use technical citation formats
+- Structure for technical review and implementation
+- Include technical appendices when relevant
+
+Generate a comprehensive technical report suitable for technical professionals and implementation teams.
+"""
+
+        elif format_type == "newsletter":
+            return """
+You are an expert content writer specializing in newsletter articles and public communication. Your task is to synthesize research materials into an engaging, accessible newsletter article that informs and educates a general audience.
+
+## NEWSLETTER ARTICLE REQUIREMENTS:
+- Produce a COMPLETE, POLISHED newsletter article in Markdown format
+- Focus on accessibility, engagement, and public interest
+- Length should be engaging but comprehensive (typically 1000-2000 words)
+- Use clear, engaging language accessible to general readers
+
+## MANDATORY STRUCTURE:
+1. **Title**: Engaging, attention-grabbing headline
+2. **Introduction**: Hook the reader with an interesting opening
+3. **Key Points**: 3-5 main points presented in an engaging way
+4. **In-Depth Analysis**: Detailed but accessible explanation of findings
+5. **Real-World Impact**: How findings affect everyday life and society
+6. **Expert Insights**: Key takeaways from the research
+7. **What's Next**: Future implications and developments
+8. **References**: Key sources for readers who want to learn more
+
+## NEWSLETTER WRITING GUIDELINES:
+- Use engaging, conversational tone while maintaining accuracy
+- Include analogies and examples to explain complex concepts
+- Focus on practical implications and real-world impact
+- Use storytelling techniques to maintain reader interest
+- Include quotes and expert opinions when available
+- Address common questions and misconceptions
+- Make technical information accessible to general readers
+
+## FORMATTING GUIDELINES:
+- Use engaging headlines and subheadings
+- Include pull quotes and call-out boxes for key information
+- Use bullet points and lists for easy scanning
+- Include relevant images and visual elements when specified
+- Structure for online reading and social sharing
+- Use engaging formatting that encourages continued reading
+
+Generate a comprehensive newsletter article that educates and engages a general audience while maintaining scientific accuracy.
+"""
+
+        else:  # academic (default)
+            return """
 You are an expert academic writer with a PhD-level understanding of scholarly communication. Your task is to synthesize research materials into a comprehensive, well-structured academic report.
 
 ## REPORT REQUIREMENTS:
@@ -298,24 +469,16 @@ You are an expert academic writer with a PhD-level understanding of scholarly co
 - Format references consistently according to academic standards
 
 ## FORMATTING GUIDELINES:
-- Use Markdown syntax for all formatting (headings, emphasis, lists, etc.)
-- Include appropriate section headings and subheadings to organize content
-- Format any equations, tables, or figures according to academic conventions
-- Use bullet points or numbered lists when appropriate for clarity
-- Use html syntax to handle all links with target="_blank", so user can always open link in new tab on both html and markdown format
+- Use proper Markdown formatting for headers, lists, and emphasis
+- Include relevant charts, graphs, and visual elements when specified
+- Use consistent citation formatting throughout
+- Structure content for academic review and publication
+- Include proper academic section numbering and organization
 
-Output the complete report in Markdown format only. Do not include meta-commentary about the writing process.
+Generate a comprehensive academic report that meets the highest standards of scholarly communication.
+"""
 
-INTERNAL CHECKLIST (DO NOT INCLUDE IN OUTPUT):
-- [ ] Incorporated all provided research materials
-- [ ] Developed original analysis beyond mere summarization
-- [ ] Included all mandatory sections with appropriate content
-- [ ] Used proper inline citations for all borrowed content
-- [ ] Created complete References section with all cited sources
-- [ ] Maintained academic tone and language throughout
-- [ ] Ensured logical flow and coherent structure
-- [ ] Preserved all source URLs and bibliographic information
-""".strip()
+    system_message = get_system_message(report_format)
 
     # Extract the original user prompt from the context
     original_prompt = extract_original_prompt_from_context(prompt)
@@ -335,7 +498,7 @@ IMPORTANT: In your report, make sure to include a "User Prompt" section right af
         resp = client.chat.completions.create(
             model=os.getenv("AZURE_OPENAI_DEPLOYMENT", "sbd-gpt-4.1-mini"),
             messages=messages_,
-            max_tokens=max_tokens,
+            max_completion_tokens=max_completion_tokens,
         )
         return resp.choices[0].message.content or ""
 
@@ -409,7 +572,8 @@ from typing import Dict, List
 def parallel_writer_agent(
     prompt: str,
     model: str = "azure:gpt-4",
-    max_workers: int = 4
+    max_workers: int = 4,
+    advanced_options: dict = None
 ) -> tuple[str, list]:
     """
     Parallel implementation that splits report generation into concurrent section tasks
@@ -436,7 +600,7 @@ def parallel_writer_agent(
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         # Submit all section writing tasks
         future_to_section = {
-            executor.submit(write_section_parallel, section, prompt, research_data, model): section
+            executor.submit(write_section_parallel, section, prompt, research_data, model, advanced_options): section
             for section in sections
         }
         
@@ -458,23 +622,75 @@ def parallel_writer_agent(
     print("SUCCESS Output:\n", final_report)
     return final_report, []
 
-def write_section_parallel(section: Dict, prompt: str, research_data: str, model: str) -> str:
+def write_section_parallel(section: Dict, prompt: str, research_data: str, model: str, advanced_options: dict = None) -> str:
     """Write a single section of the report in parallel"""
     
-    system_message = f"""
-    You are an expert academic writer. Write ONLY the {section['title']} section of an academic report.
+    # Get report format from advanced options
+    report_format = "academic"  # default
+    if advanced_options and "reportFormat" in advanced_options:
+        report_format = advanced_options["reportFormat"]
     
-    Section Requirements:
-    - {section['description']}
-    - Use the provided research data to support your content
-    - Include proper citations [1], [2], etc. where appropriate
-    - Maintain academic tone and formal language
-    - Target 300-500 words for this section
-    - Output ONLY the section content, no headers or meta-commentary
-    
-    Research Data:
-    {research_data}
-    """
+    # Format-specific system messages for sections
+    if report_format == "executive":
+        system_message = f"""
+        You are an expert business writer. Write ONLY the {section['title']} section of an executive summary.
+        
+        Section Requirements:
+        - {section['description']}
+        - Use the provided research data to support your content
+        - Focus on business impact and strategic implications
+        - Use clear, executive-friendly language
+        - Target 200-400 words for this section
+        - Output ONLY the section content, no headers or meta-commentary
+        
+        Research Data:
+        {research_data}
+        """
+    elif report_format == "technical":
+        system_message = f"""
+        You are an expert technical writer. Write ONLY the {section['title']} section of a technical report.
+        
+        Section Requirements:
+        - {section['description']}
+        - Use the provided research data to support your content
+        - Focus on technical specifications and detailed analysis
+        - Use precise technical language
+        - Target 400-600 words for this section
+        - Output ONLY the section content, no headers or meta-commentary
+        
+        Research Data:
+        {research_data}
+        """
+    elif report_format == "newsletter":
+        system_message = f"""
+        You are an expert content writer. Write ONLY the {section['title']} section of a newsletter article.
+        
+        Section Requirements:
+        - {section['description']}
+        - Use the provided research data to support your content
+        - Focus on accessibility and engagement for general readers
+        - Use engaging, conversational language
+        - Target 300-500 words for this section
+        - Output ONLY the section content, no headers or meta-commentary
+        
+        Research Data:
+        {research_data}
+        """
+    else:  # academic (default)
+        system_message = f"""
+        You are an expert academic writer. Write ONLY the {section['title']} section of an academic report.
+        
+        Section Requirements:
+        - {section['description']}
+        - Use the provided research data to support your content
+        - Include proper citations [1], [2], etc. where appropriate
+        - Maintain academic tone and formal language
+        - Target 300-500 words for this section
+        - Output ONLY the section content, no headers or meta-commentary
+        
+        Research Data:
+        {research_data}
+        """
     
     messages = [
         {"role": "system", "content": system_message},
@@ -484,7 +700,7 @@ def write_section_parallel(section: Dict, prompt: str, research_data: str, model
     response = client.chat.completions.create(
         model=os.getenv("AZURE_OPENAI_DEPLOYMENT", "sbd-gpt-4.1-mini"),
         messages=messages,
-        max_tokens=2000
+        max_completion_tokens=2000
     )
     
     return response.choices[0].message.content or ""
@@ -566,7 +782,7 @@ def extract_original_prompt_from_context(prompt: str) -> str:
 def analysis_agent(
     prompt: str,
     model: str = "azure:gpt-4",
-    max_tokens: int = 4000,
+    max_completion_tokens: int = 4000,
 ) -> tuple[str, list]:
     """
     Analysis agent for intermediate steps - analyzes, synthesizes, or organizes research findings
@@ -611,9 +827,9 @@ Do not generate full report structures (Title, Abstract, Introduction, etc.). Fo
 
     try:
         resp = client.chat.completions.create(
-            model=os.getenv("AZURE_OPENAI_DEPLOYMENT", "sbd-gpt-4.1-mini"),
+            model=os.getenv("AZURE_OPENAI_DEPLOYMENT", "sbd-o3-mini-0131"),
             messages=messages,
-            max_tokens=max_tokens,
+            max_completion_tokens=max_completion_tokens,
         )
 
         content = resp.choices[0].message.content or ""

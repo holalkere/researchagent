@@ -2,898 +2,2705 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Deep Research Agent</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" onerror="loadJsPDFFallback()"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
-    /* Modern Color Scheme */
+    /* Dark DeWalt Theme Variables */
     :root {
-      --primary: #6366f1;
-      --primary-dark: #4f46e5;
-      --primary-light: #8b5cf6;
-      --secondary: #64748b;
-      --accent: #06b6d4;
-      --success: #10b981;
-      --warning: #f59e0b;
-      --error: #ef4444;
-      --dark: #0f172a;
-      --light: #f8fafc;
-      --white: #ffffff;
-      --gray-50: #f8fafc;
-      --gray-100: #f1f5f9;
-      --gray-200: #e2e8f0;
-      --gray-300: #cbd5e1;
-      --gray-400: #94a3b8;
-      --gray-500: #64748b;
-      --gray-600: #475569;
-      --gray-700: #334155;
-      --gray-800: #1e293b;
-      --gray-900: #0f172a;
+      /* DeWalt Brand Colors */
+      --dewalt-yellow: #FFD700;
+      --dewalt-orange: #FF8C00;
+      --dewalt-black: #000000;
+      --dewalt-dark: #1a1a1a;
+      --dewalt-gray: #2d2d2d;
+      --dewalt-light-gray: #404040;
+      --dewalt-border: #404040;
+      
+      /* Dark Theme Colors */
+      --bg-primary: #1a1a1a;
+      --bg-secondary: #2d2d2d;
+      --bg-card: rgba(45, 45, 45, 0.9);
+      --text-primary: #f5f5f5;
+      --text-secondary: #b0b0b0;
+      --text-muted: #808080;
+      
+      /* Glassmorphism */
+      --glass-bg: rgba(45, 45, 45, 0.8);
+      --glass-border: rgba(255, 215, 0, 0.2);
+      
+      /* Shadows */
+      --shadow-soft: 0 8px 32px rgba(0, 0, 0, 0.3);
+      --shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.4);
+      --shadow-glow: 0 0 20px rgba(255, 215, 0, 0.3);
+      
+      /* Status Colors */
+      --success-green: #22c55e;
+      --error-red: #ef4444;
+      --warning-orange: #f59e0b;
+      --info-blue: #3b82f6;
     }
-    
+
+    /* Global Styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     body {
-      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%);
       font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, var(--bg-primary) 0%, var(--dewalt-dark) 100%);
+      color: var(--text-primary);
       min-height: 100vh;
-      margin: 0;
-      padding: 0;
-      position: relative;
-    }
-    
-    body::before {
-      content: '';
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: 
-        radial-gradient(circle at 20% 80%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
-        radial-gradient(circle at 80% 20%, rgba(6, 182, 212, 0.05) 0%, transparent 50%);
-      pointer-events: none;
-      z-index: -1;
-    }
-    
-    .container {
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(20px);
-      border-radius: 24px;
-      box-shadow: 
-        0 25px 50px -12px rgba(0, 0, 0, 0.25),
-        0 0 0 1px rgba(255, 255, 255, 0.05);
-      padding: 0;
-      margin-top: 2rem;
-      overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      position: relative;
-    }
-    
-    h2 {
-      color: var(--gray-800);
-      font-weight: 700;
-      text-align: center;
-      margin: 0;
-      padding: 2.5rem;
-      background: linear-gradient(135deg, var(--gray-50) 0%, var(--white) 100%);
-      border-radius: 0;
-      font-size: 2.25rem;
-      letter-spacing: -0.025em;
-      position: relative;
-      overflow: hidden;
-      border-bottom: 1px solid var(--gray-200);
-    }
-    
-    h2::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.05), transparent);
-      animation: shimmer 3s infinite;
-    }
-    
-    @keyframes shimmer {
-      0% { left: -100%; }
-      100% { left: 100%; }
-    }
-    
-    .form-label {
-      color: var(--gray-800);
-      font-weight: 600;
-      font-size: 1rem;
-      margin-bottom: 0.75rem;
-      display: block;
-    }
-    
-    .form-control {
-      border: 1px solid var(--gray-300);
-      border-radius: 12px;
-      padding: 1rem;
-      font-size: 1rem;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      background-color: var(--white);
-      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    }
-    
-    .form-control:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-      outline: none;
-      transform: translateY(-1px);
-    }
-    
-    .form-control:hover {
-      border-color: var(--gray-400);
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    }
-    
-    .btn-primary {
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-      border: none;
-      color: var(--white);
-      font-weight: 600;
-      padding: 0.875rem 2rem;
-      border-radius: 12px;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-      font-size: 1rem;
-      letter-spacing: 0.025em;
-      position: relative;
-      overflow: hidden;
-    }
-    
-    .btn-primary::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-      transition: left 0.5s;
-    }
-    
-    .btn-primary:hover::before {
-      left: 100%;
-    }
-    
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-      background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
-    }
-    
-    .btn-primary:active {
-      transform: translateY(0);
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    }
-    
-    .btn-primary:disabled {
-      background: var(--gray-400);
-      color: var(--white);
-      transform: none;
-      box-shadow: none;
-      cursor: not-allowed;
-    }
-    
-    /* PDF Download Button */
-    .btn-pdf {
-      background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
-      border: none;
-      color: var(--white);
-      font-weight: 600;
-      padding: 0.75rem 1.5rem;
-      border-radius: 12px;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-      font-size: 0.875rem;
-      letter-spacing: 0.025em;
-      position: relative;
-      overflow: hidden;
-    }
-    
-    .btn-pdf::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-      transition: left 0.5s;
-    }
-    
-    .btn-pdf:hover::before {
-      left: 100%;
-    }
-    
-    .btn-pdf:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-      background: linear-gradient(135deg, #059669 0%, var(--success) 100%);
-    }
-    
-    .btn-pdf:disabled {
-      background: var(--gray-400);
-      color: var(--white);
-      transform: none;
-      box-shadow: none;
-      cursor: not-allowed;
-    }
-    
-    /* PDF-specific styles */
-    .pdf-content {
-      font-family: 'Inter', 'Segoe UI', sans-serif;
       line-height: 1.6;
-      color: #333;
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 2rem;
+      margin: 0;
+      padding: 0;
     }
-    
-    .pdf-content h1 {
-      color: var(--craftsman-red);
-      font-size: 2.5rem;
-      font-weight: 800;
-      text-align: center;
-      margin-bottom: 2rem;
-      border-bottom: 3px solid var(--craftsman-red);
-      padding-bottom: 1rem;
-    }
-    
-    .pdf-content h2 {
-      color: var(--craftsman-red);
-      font-size: 1.8rem;
-      font-weight: 700;
-      margin-top: 2rem;
-      margin-bottom: 1rem;
-      border-left: 4px solid var(--craftsman-red);
-      padding-left: 1rem;
-    }
-    
-    .pdf-content h3 {
-      color: var(--craftsman-black);
-      font-size: 1.4rem;
-      font-weight: 600;
-      margin-top: 1.5rem;
-      margin-bottom: 0.8rem;
-    }
-    
-    .pdf-content p {
-      margin-bottom: 1rem;
-      text-align: justify;
-    }
-    
-    .pdf-content ul, .pdf-content ol {
-      margin-bottom: 1rem;
-      padding-left: 2rem;
-    }
-    
-    .pdf-content li {
-      margin-bottom: 0.5rem;
-    }
-    
-    .pdf-content blockquote {
-      border-left: 4px solid var(--craftsman-red);
-      padding-left: 1rem;
-      margin: 1.5rem 0;
-      font-style: italic;
-      background-color: #f8f9fa;
+
+    /* Modern Layout Structure */
+    .main-layout {
+      display: flex;
+      gap: 1%;
       padding: 1rem;
-      border-radius: 0 8px 8px 0;
+      max-width: none;
+      margin: 0 0 0 15%;
+      min-height: calc(100vh - 80px);
+      transition: all 0.3s ease;
     }
     
-    .pdf-content a {
-      color: var(--craftsman-red);
-      text-decoration: none;
+    .main-content {
+      flex: 0 0 70%;
+      transition: all 0.3s ease;
+      padding-left: 0;
+      padding-right: 0;
     }
     
-    .pdf-content a:hover {
-      text-decoration: underline;
+    .welcome-content {
+      margin-left: 15%;
+      margin-top: 10%;
     }
     
-    .pdf-content code {
-      background-color: #f1f3f4;
-      padding: 0.2rem 0.4rem;
-      border-radius: 4px;
-      font-family: 'Courier New', monospace;
-      font-size: 0.9em;
+    .right-sidebar {
+      flex: 0 0 29%;
+      transition: all 0.3s ease;
     }
     
-    .pdf-content pre {
-      background-color: #f8f9fa;
-      padding: 1rem;
+
+    .main-content {
+      background: var(--bg-card);
+      border-radius: 20px;
+      padding: 1.5rem;
+      box-shadow: var(--shadow-soft);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+    }
+
+    .right-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    
+    .right-sidebar .text-muted {
+      color: var(--text-secondary) !important;
+    }
+    
+    /* Workflow Steps Styling */
+    .workflow-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    
+    .workflow-step {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem;
       border-radius: 8px;
-      overflow-x: auto;
-      border: 1px solid #e9ecef;
+      transition: all 0.3s ease;
     }
     
-    .pdf-content table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 1.5rem 0;
+    .workflow-step:hover {
+      background: var(--bg-secondary);
     }
     
-    .pdf-content th, .pdf-content td {
-      border: 1px solid #dee2e6;
-      padding: 0.75rem;
-      text-align: left;
+    .status-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--dewalt-border);
+      transition: all 0.3s ease;
     }
     
-    .pdf-content th {
-      background-color: var(--craftsman-red);
-      color: white;
-      font-weight: 600;
+    .workflow-step.active .status-indicator {
+      background: var(--dewalt-yellow);
+      box-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
     }
     
-    .pdf-content .page-break {
-      page-break-before: always;
+    .workflow-step.completed .status-indicator {
+      background: var(--success-green);
     }
     
-    .step-header { 
-      cursor: pointer; 
-      padding: 1rem;
-      border-radius: 12px;
-      margin-bottom: 0.75rem;
-      transition: all 0.2s ease;
-      font-weight: 600;
-      border: 1px solid transparent;
+    .workflow-step.error .status-indicator {
+      background: var(--error-red);
     }
-    
-    .step-running { 
-      background: linear-gradient(135deg, var(--primary) 0%, rgba(99, 102, 241, 0.1) 100%);
-      color: var(--white);
-      border-color: var(--primary);
-      box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.1);
+
+    .glass-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: 20px;
+      box-shadow: var(--shadow-soft);
+      transition: all 0.3s ease;
     }
-    
-    .step-done { 
-      background: linear-gradient(135deg, var(--success) 0%, rgba(16, 185, 129, 0.1) 100%);
-      color: var(--white);
-      border-color: var(--success);
-      box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.1);
-    }
-    
-    .step-error { 
-      background: linear-gradient(135deg, var(--error) 0%, rgba(239, 68, 68, 0.1) 100%);
-      color: var(--white);
-      border-color: var(--error);
-      box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.1);
-    }
-    
-    .step-pending { 
-      background: linear-gradient(135deg, var(--gray-500) 0%, rgba(100, 116, 139, 0.1) 100%);
-      color: var(--white);
-      border-color: var(--gray-500);
-      box-shadow: 0 4px 6px -1px rgba(100, 116, 139, 0.1);
-    }
-    
-    .substep { 
-      font-size: 0.9em; 
-      margin-left: 1.5rem; 
-      margin-top: 0.75rem;
-    }
-    
-    .substep-header { 
-      cursor: pointer; 
-      font-weight: 600; 
-      color: var(--gray-800);
-      padding: 0.75rem;
-      background-color: var(--gray-100);
-      border-radius: 8px;
-      transition: all 0.2s ease;
-      border: 1px solid var(--gray-200);
-    }
-    
-    .substep-header:hover {
-      background-color: var(--primary);
-      color: var(--white);
-      border-color: var(--primary);
-      transform: translateY(-1px);
-      box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.1);
-    }
-    
-    .status-icon { 
-      margin-right: 0.5rem; 
-    }
-    
-    #stepStatusList div { 
-      margin-bottom: 0.25rem; 
-    }
-    
-    #finalReport { 
-      background-color: var(--white); 
-      border: 1px solid var(--gray-200); 
-      padding: 2rem; 
-      border-radius: 16px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-      color: #000000 !important;
-    }
-    
-    /* Ensure all text in final report is black */
-    #finalReport * {
-      color: #000000 !important;
-    }
-    
-    /* Override any inherited colors in the report */
-    #finalReport h1, #finalReport h2, #finalReport h3, #finalReport h4, #finalReport h5, #finalReport h6 {
-      color: #000000 !important;
-    }
-    
-    #finalReport p, #finalReport div, #finalReport span, #finalReport li, #finalReport td, #finalReport th {
-      color: #000000 !important;
-    }
-    
-    /* Keep links blue but ensure they're visible */
-    #finalReport a {
-      color: #0066cc !important;
-    }
-    
-    #finalReport a:hover {
-      color: #004499 !important;
-    }
-    
-    /* Ensure step details content is also black */
-    .card-body, .card-body * {
-      color: #000000 !important;
-    }
-    
-    .card-body a {
-      color: #0066cc !important;
-    }
-    
-    .card-body a:hover {
-      color: #004499 !important;
-    }
-    
-    .card {
-      border: 1px solid var(--gray-200);
-      border-radius: 16px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-      transition: all 0.2s ease;
-    }
-    
-    .card:hover {
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+    .glass-card:hover {
+      box-shadow: var(--shadow-hover);
       transform: translateY(-2px);
     }
-    
-    .card-header {
-      background: linear-gradient(135deg, var(--gray-800) 0%, var(--gray-700) 100%);
-      color: var(--white);
-      font-weight: 600;
-      border-radius: 16px 16px 0 0;
+
+    /* Modern Input Styling */
+    .modern-input {
+      border: 2px solid transparent;
+      background: linear-gradient(var(--bg-secondary), var(--bg-secondary)) padding-box,
+                  var(--dewalt-yellow) border-box;
+      border-radius: 16px;
+      padding: 1rem 1.5rem;
+      font-size: 1.1rem;
+      color: var(--text-primary);
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     }
-    
-    .btn-outline-secondary {
-      border: 1px solid var(--gray-300);
-      color: var(--gray-700);
-      font-weight: 600;
-      transition: all 0.2s ease;
-      background-color: var(--white);
-    }
-    
-    .btn-outline-secondary:hover {
-      background-color: var(--primary);
-      border-color: var(--primary);
-      color: var(--white);
+
+    .modern-input:focus {
+      outline: none;
+      box-shadow: var(--shadow-glow);
       transform: translateY(-1px);
-      box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.1);
     }
-    
-    .form-text {
-      color: var(--gray-500);
-      font-style: italic;
+
+    .modern-input::placeholder {
+      color: var(--text-muted);
     }
-    
-    code {
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-      color: var(--white);
-      padding: 0.25rem 0.5rem;
-      border-radius: 6px;
-      font-weight: 500;
-      font-size: 0.875em;
-      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    }
-    
-    .spinner-border-sm {
-      color: var(--primary) !important;
-    }
-    
-    /* Chat History Panel Styles */
-    .chat-history-panel {
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 24px;
-      padding: 2rem;
-      height: calc(100vh - 2rem);
-      overflow-y: auto;
-      box-shadow: 
-        0 25px 50px -12px rgba(0, 0, 0, 0.25),
-        0 0 0 1px rgba(255, 255, 255, 0.05);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      position: relative;
-    }
-    
-    .chat-history-panel::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 4px;
-      background: linear-gradient(90deg, var(--gray-300) 0%, var(--gray-400) 100%);
-      border-radius: 24px 24px 0 0;
-    }
-    
-    .chat-history-panel.collapsed {
-      width: 0;
-      padding: 0;
+
+    /* Modern Button Styling */
+    .modern-btn {
+      background: linear-gradient(135deg, var(--dewalt-yellow) 0%, var(--dewalt-orange) 100%);
       border: none;
-      overflow: hidden;
+      border-radius: 12px;
+      padding: 0.75rem 2rem;
+      color: var(--dewalt-black);
+      font-weight: 600;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+    }
+
+    .modern-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4);
+      color: var(--dewalt-black);
+    }
+
+    /* Research Input Section Full Width */
+    .research-input-section {
+      width: 100%;
+      max-width: none;
     }
     
-    .sidebar-toggle {
-      position: fixed;
-      top: 2rem;
-      left: 1rem;
-      z-index: 1000;
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-      border: 2px solid var(--white);
+    .research-input-section .modern-input {
+      width: 100%;
+      min-height: 120px;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1200px) {
+      .main-layout {
+        grid-template-columns: 1fr;
+      }
+      
+      .right-sidebar {
+        order: -1;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .main-layout {
+        padding: 1rem;
+        gap: 1rem;
+      }
+      
+      .main-content {
+        padding: 1.5rem;
+      }
+    }
+
+    /* Workflow Steps Styling */
+    .workflow-step {
+      display: flex;
+      align-items: center;
+      padding: 1rem;
+      margin: 0.5rem 0;
+      background: rgba(255, 215, 0, 0.05);
+      border-radius: 12px;
+      border-left: 4px solid var(--dewalt-yellow);
+      transition: all 0.3s ease;
+    }
+
+    .workflow-step:hover {
+      background: rgba(255, 215, 0, 0.1);
+      transform: translateX(4px);
+    }
+
+    .workflow-step.completed {
+      background: rgba(34, 197, 94, 0.1);
+      border-left-color: var(--success-green);
+    }
+
+    .workflow-step.active {
+      background: rgba(255, 215, 0, 0.15);
+      border-left-color: var(--dewalt-yellow);
+      box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2);
+    }
+
+    .status-indicator {
+      width: 12px;
+      height: 12px;
       border-radius: 50%;
-      width: 50px;
-      height: 50px;
+      background: var(--dewalt-light-gray);
+      margin-right: 1rem;
+    }
+
+    .status-indicator.completed {
+      background: var(--success-green);
+    }
+
+    .status-indicator.active {
+      background: var(--dewalt-yellow);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* Action Buttons */
+    .action-btn {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      padding: 0.75rem 1rem;
+      margin: 0.5rem 0;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--dewalt-border);
+      border-radius: 12px;
+      color: var(--text-primary);
+      text-decoration: none;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .action-btn:hover {
+      background: rgba(255, 215, 0, 0.1);
+      transform: translateX(4px);
+      color: var(--dewalt-yellow);
+      border-color: var(--dewalt-yellow);
+    }
+
+    .action-btn i {
+      color: var(--dewalt-yellow);
+    }
+
+    /* Header Styles */
+    .app-header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--dewalt-border);
+      backdrop-filter: blur(20px);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: var(--shadow-light);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      flex: 0 0 auto;
+    }
+
+    .header-center {
       display: flex;
       align-items: center;
       justify-content: center;
+      flex: 1;
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .brand-banner {
+      background: var(--primary-yellow);
+      color: var(--text-black);
+      padding: 0.5rem 1rem;
+      font-weight: 700;
+      font-size: 1.1rem;
+      transform: skewX(-15deg);
+      border-radius: 4px;
+      box-shadow: var(--shadow-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .brand-banner span {
+      transform: skewX(15deg);
+      display: inline-block;
+    }
+
+    .brand-logo {
+      transform: skewX(15deg);
+      display: block;
+      margin: 0 auto;
+    }
+
+    .app-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--text-black);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 0.75rem;
+      flex: 0 0 auto;
+    }
+
+    .header-btn {
+      background: var(--bg-white);
+      border: 1px solid var(--border-gray);
+      color: var(--text-black);
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-weight: 500;
+      transition: all 0.2s ease;
       cursor: pointer;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     }
-    
-    .sidebar-toggle:hover {
-      background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
-      transform: scale(1.05) translateY(-2px);
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+    .header-btn:hover {
+      background: var(--accent-gray);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-light);
     }
-    
-    .sidebar-toggle.collapsed {
-      left: 1rem;
+
+    .header-btn.primary {
+      background: var(--primary-yellow);
+      border-color: var(--primary-yellow);
+      color: var(--text-black);
     }
-    
-    .sidebar-toggle.expanded {
-      left: calc(25% + 0.5rem);
+
+    .header-btn.primary:hover {
+      background: #E6C200;
+      transform: translateY(-1px);
     }
-    
-    .sidebar-toggle i {
-      font-size: 1.2rem;
-      color: var(--white);
+
+    /* Main Content Styles */
+    .welcome-section {
+      padding: 0.5rem 2rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .welcome-banner {
+      background: var(--primary-yellow);
+      color: var(--text-black);
+      padding: 0.75rem 1.5rem;
+      font-weight: 700;
+      font-size: 1.4rem;
+      transform: skewX(-15deg);
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      box-shadow: var(--shadow-medium);
+      text-align: center;
+    }
+
+    .welcome-banner span {
+      transform: skewX(15deg);
+      display: inline-block;
+    }
+
+    .welcome-content {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+      width: 100%;
+    }
+
+    .welcome-text {
+      flex: 0 0 50%;
+      min-width: 350px;
+    }
+
+    .welcome-title {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--text-black);
+      margin-bottom: 0.5rem;
+    }
+
+    .welcome-description {
+      font-size: 0.95rem;
+      color: var(--text-black);
+      margin-bottom: 0.75rem;
+      line-height: 1.6;
+    }
+
+    .features-list {
+      margin: 0.75rem 0;
+    }
+
+    .features-list h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: var(--text-black);
+    }
+
+    .features-list ul {
+      list-style: none;
+      padding-left: 0;
+    }
+
+    .features-list li {
+      padding: 0.2rem 0;
+      color: var(--text-black);
+      font-size: 0.9rem;
+    }
+
+    .features-list li:before {
+      content: "•";
+      color: var(--primary-yellow);
+      font-weight: bold;
+      margin-right: 0.5rem;
+    }
+
+    .disclaimer {
+      background: var(--accent-gray);
+      padding: 0.75rem;
+      border-radius: 6px;
+      margin: 1rem 0;
+      font-size: 0.85rem;
+    }
+
+    .disclaimer a {
+      color: var(--primary-blue);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .disclaimer a:hover {
+      text-decoration: underline;
+    }
+
+    .avatar-section {
+      flex-shrink: 0;
+      width: 120px;
+    }
+
+    .avatar-container {
+      background: var(--dewalt-black);
+      border-radius: 10px;
+      padding: 1rem;
+      text-align: center;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+      min-height: 140px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      border: 2px solid var(--dewalt-yellow);
+    }
+
+    .beacon-logo {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+    }
+
+    .beacon-logo-image {
+      max-width: 120px;
+      max-height: 120px;
+      width: auto;
+      height: auto;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      transition: all 0.3s ease;
+      filter: brightness(1.1) contrast(1.1);
+    }
+
+    .beacon-logo-image:hover {
+      transform: scale(1.08);
+      box-shadow: 0 8px 24px rgba(254, 189, 22, 0.3);
+      filter: brightness(1.2) contrast(1.2);
+    }
+
+    .logo-fallback {
+      width: 120px;
+      height: 120px;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Input Section Styles */
+    .input-section {
+      background: var(--accent-gray);
+      padding: 2rem;
+      border-top: 1px solid var(--border-gray);
+    }
+
+    .input-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .input-actions {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .action-btn {
+      background: var(--bg-white);
+      border: 1px solid var(--border-gray);
+      color: var(--text-black);
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .action-btn:hover {
+      background: var(--primary-yellow);
+      border-color: var(--primary-yellow);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-light);
+    }
+
+    .collapsible-section {
+      background: var(--bg-white);
+      border: 1px solid var(--border-gray);
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+
+    .section-header {
+      background: var(--accent-gray);
+      padding: 1rem 1.5rem;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 600;
+      color: var(--text-black);
+      transition: background 0.2s ease;
+    }
+
+    .section-header:hover {
+      background: var(--primary-yellow);
+    }
+
+    .section-content {
+      padding: 1.5rem;
+      display: none;
+    }
+
+    .section-content.expanded {
+      display: block;
+    }
+
+    .section-arrow {
       transition: transform 0.2s ease;
     }
-    
-    .sidebar-toggle.collapsed i {
+
+    .section-arrow.rotated {
       transform: rotate(180deg);
     }
-    
-    .chat-history-panel h5 {
-      color: var(--gray-800);
-      font-weight: 700;
-      text-align: center;
-      padding: 1rem 0;
-      border-bottom: 2px solid var(--gray-300);
-      margin-bottom: 2rem;
-      font-size: 1.25rem;
-      letter-spacing: -0.025em;
-      position: relative;
+
+    .input-group {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-end;
     }
-    
-    .chat-history-panel h5::after {
-      content: '';
-      position: absolute;
-      bottom: -2px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 60px;
-      height: 2px;
-      background: var(--gray-400);
-      border-radius: 1px;
-    }
-    
-    .chat-history-list {
-      max-height: calc(100vh - 200px);
-      overflow-y: auto;
-    }
-    
-    .chat-history-item {
-      background: linear-gradient(135deg, var(--gray-50) 0%, var(--white) 100%);
-      border: 1px solid var(--gray-200);
-      border-radius: 12px;
+
+    .input-field {
+      flex: 1;
       padding: 1rem;
-      margin-bottom: 0.75rem;
+      border: 2px solid var(--border-gray);
+      border-radius: 8px;
+      font-size: 1rem;
+      resize: vertical;
+      min-height: 60px;
+      transition: border-color 0.2s ease;
+    }
+
+    .input-field:focus {
+      outline: none;
+      border-color: var(--primary-blue);
+      box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+    }
+
+    .input-actions-right {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .input-btn {
+      background: var(--primary-blue);
+      color: var(--bg-white);
+      border: none;
+      padding: 0.75rem;
+      border-radius: 8px;
       cursor: pointer;
       transition: all 0.2s ease;
-      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
     }
-    
-    .chat-history-item:hover {
-      background: linear-gradient(135deg, var(--primary) 0%, rgba(99, 102, 241, 0.1) 100%);
-      border-color: var(--primary);
-      transform: translateY(-2px);
-      box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.1);
+
+    .input-btn:hover {
+      background: #0052A3;
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-light);
     }
-    
-    .chat-history-item.active {
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-      border-color: var(--primary-dark);
-      color: var(--white);
+
+    .input-btn.secondary {
+      background: var(--accent-gray);
+      color: var(--text-black);
     }
-    
-    .chat-history-title {
+
+    .input-btn.secondary:hover {
+      background: var(--border-gray);
+    }
+
+    /* Voice Input Styles */
+    .voice-visualizer {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 150px;
+    }
+
+    .voice-circle {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary-blue) 0%, #0052A3 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--bg-white);
+      transition: all 0.3s ease;
+      animation: pulse 2s infinite;
+    }
+
+    .voice-circle.recording {
+      animation: recordingPulse 0.5s infinite;
+      background: linear-gradient(135deg, var(--error) 0%, #DC2626 100%);
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    @keyframes recordingPulse {
+      0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+      70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+      100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+
+    /* Modal Enhancements */
+    .modal-header {
+      background: linear-gradient(135deg, var(--primary-yellow) 0%, #E6C200 100%);
+      color: var(--text-black);
+      border-bottom: 1px solid var(--border-gray);
+    }
+
+    .modal-title {
       font-weight: 600;
-      font-size: 0.9rem;
-      color: var(--gray-800);
-      margin-bottom: 0.5rem;
-      line-height: 1.3;
     }
-    
-    .chat-history-date {
+
+    /* Notification Styles */
+    .alert {
+      border-radius: 8px;
+      box-shadow: var(--shadow-medium);
+    }
+
+    /* Research Workflow Embedded Window */
+    .workflow-sidebar {
+      flex: 0 0 380px;
+      max-width: 380px;
+      background: white;
+      border-radius: 8px;
+      padding: 0;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+      border: 1px solid #e0e0e0;
+      max-height: 480px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .workflow-sidebar .workflow-header {
+      background: linear-gradient(135deg, var(--dewalt-yellow) 0%, var(--dewalt-yellow-dark) 100%);
+      color: var(--dewalt-black);
+      padding: 0.4rem 0.6rem;
+      border-bottom: 1px solid #d4a017;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .workflow-sidebar .workflow-title {
       font-size: 0.75rem;
-      color: var(--gray-500);
+      font-weight: 700;
+      color: var(--dewalt-black);
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      margin: 0;
+    }
+
+
+    .workflow-sidebar .workflow-progress {
+      font-size: 0.65rem;
+      color: var(--dewalt-black);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .workflow-sidebar .progress-bar-container {
+      width: 100px;
+      height: 5px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .workflow-sidebar .progress-bar-fill {
+      height: 100%;
+      background: var(--dewalt-black);
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+
+    .workflow-sidebar .workflow-steps {
+      flex: 1;
+      padding: 0.2rem 0.6rem 0.6rem 0.6rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .workflow-sidebar .step-header {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 6px;
+      padding: 0.6rem;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .workflow-sidebar .step-header:hover {
+      background: #e9ecef;
+      border-color: var(--dewalt-yellow);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .workflow-sidebar .step-header.step-done {
+      background: #d4edda;
+      border-color: #c3e6cb;
+    }
+
+    .workflow-sidebar .step-header.step-running {
+      background: #fff3cd;
+      border-color: #ffeaa7;
+    }
+
+    .workflow-sidebar .step-header.step-error {
+      background: #f8d7da;
+      border-color: #f5c6cb;
+    }
+
+    .workflow-sidebar .step-icon {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 0.4rem;
+      font-size: 0.6rem;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .workflow-sidebar .step-title {
+      font-size: 0.63rem;
+      font-weight: 500;
+      line-height: 1.4;
+      color: #333;
+      flex: 1;
+      padding-right: 0.3rem;
+    }
+
+    .workflow-sidebar .step-status {
+      font-size: 0.5rem;
+      font-weight: 600;
+      padding: 0.1rem 0.25rem;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05px;
+      flex-shrink: 0;
+      line-height: 0.9;
+    }
+
+    .workflow-sidebar .step-status.done {
+      background: #28a745;
+      color: white;
+    }
+
+    .workflow-sidebar .step-status.running {
+      background: #ffc107;
+      color: #212529;
+    }
+
+    .workflow-sidebar .step-status.error {
+      background: #dc3545;
+      color: white;
+    }
+
+    .workflow-sidebar .step-status.pending {
+      background: #6c757d;
+      color: white;
+    }
+
+    /* Research Results Section Styles */
+    .results-container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      border: 1px solid #e0e0e0;
+      overflow: hidden;
+    }
+
+    .results-header {
+      background: linear-gradient(135deg, var(--dewalt-yellow) 0%, var(--dewalt-yellow-dark) 100%);
+      color: var(--dewalt-black);
+      padding: 1rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #d4a017;
+    }
+
+    .results-header h3 {
+      margin: 0;
+      font-size: 1.2rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .results-header h3 i {
+      font-size: 1.1rem;
+    }
+
+    .results-actions {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .results-content {
+      padding: 2rem;
+      max-height: 600px;
+      overflow-y: auto;
+      background: #ffffff;
+      color: #1a1a1a;
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+
+    .results-content h1,
+    .results-content h2,
+    .results-content h3,
+    .results-content h4,
+    .results-content h5,
+    .results-content h6 {
+      color: #1a1a1a;
+      margin-top: 1.5rem;
+      margin-bottom: 1rem;
+      font-weight: 600;
+    }
+
+    /* Bold research step headers */
+    .results-content .research-step-header {
+      font-weight: bold !important;
+      color: #2563eb !important;
+      font-size: 1.1rem !important;
+      display: block;
+      margin: 1rem 0 0.5rem 0;
+    }
+
+
+    /* PDF content styling */
+    .pdf-content {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      color: #000;
+    }
+
+    .pdf-content h1, .pdf-content h2, .pdf-content h3, .pdf-content h4, .pdf-content h5, .pdf-content h6 {
+      color: #000;
+      margin-top: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .pdf-content p {
+      margin-bottom: 0.5rem;
+    }
+
+    .pdf-content ul, .pdf-content ol {
+      margin-bottom: 0.5rem;
+      padding-left: 1.5rem;
+    }
+
+    .pdf-content li {
       margin-bottom: 0.25rem;
     }
-    
-    .chat-history-prompt {
-      font-size: 0.8rem;
-      color: var(--gray-500);
-      line-height: 1.2;
-      max-height: 3rem;
+
+    .pdf-content a {
+      color: #0066cc;
+      text-decoration: underline;
+    }
+
+    /* Voice input styling */
+    .voice-visualizer {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 2rem 0;
+    }
+
+    .voice-circle {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .voice-circle.listening {
+      background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+      animation: pulse 1.5s infinite;
+      box-shadow: 0 4px 20px rgba(255, 107, 107, 0.6);
+    }
+
+    .voice-circle.processing {
+      background: linear-gradient(135deg, #feca57 0%, #ff9ff3 100%);
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .results-content h1 {
+      font-size: 1.8rem;
+      border-bottom: 2px solid var(--dewalt-yellow);
+      padding-bottom: 0.5rem;
+    }
+
+    .results-content h2 {
+      font-size: 1.5rem;
+      color: var(--dewalt-gray);
+    }
+
+    .results-content h3 {
+      font-size: 1.3rem;
+    }
+
+    .results-content p {
+      line-height: 1.7;
+      margin-bottom: 1.2rem;
+      color: #1a1a1a;
+      font-size: 1rem;
+      font-weight: 400;
+    }
+
+    .results-content ul,
+    .results-content ol {
+      margin-bottom: 1rem;
+      padding-left: 1.5rem;
+    }
+
+    .results-content li {
+      margin-bottom: 0.7rem;
+      line-height: 1.6;
+      color: #1a1a1a;
+      font-size: 1rem;
+    }
+
+    .results-content blockquote {
+      border-left: 4px solid var(--dewalt-yellow);
+      padding-left: 1rem;
+      margin: 1rem 0;
+      background: #f8f9fa;
+      padding: 1rem;
+      border-radius: 0 4px 4px 0;
+    }
+
+    .results-content code {
+      background: #f1f3f4;
+      padding: 0.2rem 0.4rem;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+    }
+
+    .results-content pre {
+      background: #f8f9fa;
+      padding: 1rem;
+      border-radius: 6px;
+      overflow-x: auto;
+      border: 1px solid #e9ecef;
+    }
+
+    .results-content table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+    }
+
+    .results-content th,
+    .results-content td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid #e9ecef;
+      color: #1a1a1a;
+      font-size: 1rem;
+    }
+
+    .results-content th {
+      background: #f8f9fa;
+      font-weight: 600;
+      color: #1a1a1a;
+    }
+
+    .results-content a {
+      color: var(--primary-blue);
+      text-decoration: none;
+    }
+
+    .results-content a:hover {
+      text-decoration: underline;
+    }
+
+    /* Modern Workflow Status Styles - SBD Dewalt Theme */
+    .workflow-container {
+      background: var(--dewalt-light-gray);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin: 1rem 0;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      border: 1px solid var(--dewalt-border);
+    }
+
+    .workflow-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid var(--dewalt-yellow);
+    }
+
+    .workflow-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--dewalt-black);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .workflow-title::before {
+      content: "⚡";
+      font-size: 1.5rem;
+      color: var(--dewalt-yellow);
+    }
+
+    .workflow-progress {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.9rem;
+      color: var(--dewalt-gray);
+      font-weight: 500;
+    }
+
+    .progress-bar-container {
+      width: 120px;
+      height: 6px;
+      background: var(--dewalt-border);
+      border-radius: 3px;
       overflow: hidden;
-      text-overflow: ellipsis;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--dewalt-yellow) 0%, var(--dewalt-yellow-dark) 100%);
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+
+    .step-header {
+      display: flex;
+      align-items: center;
+      padding: 0.5rem 0.75rem;
+      margin-bottom: 0.3rem;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+      font-weight: 600;
+      border: 2px solid transparent;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .step-header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.5s ease;
+    }
+
+    .step-header:hover::before {
+      left: 100%;
+    }
+
+    .step-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 0.5rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .step-title {
+      flex: 1;
+      font-size: 0.75rem;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    .step-status {
+      font-size: 0.65rem;
+      font-weight: 500;
+      padding: 0.15rem 0.3rem;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      line-height: 1.2;
+    }
+
+    .step-running {
+      background: linear-gradient(135deg, var(--dewalt-yellow) 0%, var(--dewalt-yellow-dark) 100%);
+      color: var(--dewalt-black);
+      border-color: var(--dewalt-yellow);
+      box-shadow: 0 4px 12px rgba(254, 189, 22, 0.3);
+    }
+
+    .step-running .step-icon {
+      background: var(--dewalt-black);
+      color: var(--dewalt-yellow);
+      animation: pulse 2s infinite;
+    }
+
+    .step-running .step-status {
+      background: var(--dewalt-black);
+      color: var(--dewalt-yellow);
+    }
+
+    .step-done {
+      background: linear-gradient(135deg, var(--success-green) 0%, #059669 100%);
+      color: white;
+      border-color: var(--success-green);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+
+    .step-done .step-icon {
+      background: white;
+      color: var(--success-green);
+    }
+
+    .step-done .step-status {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+    }
+
+    .step-error {
+      background: linear-gradient(135deg, var(--error-red) 0%, #DC2626 100%);
+      color: white;
+      border-color: var(--error-red);
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    }
+
+    .step-error .step-icon {
+      background: white;
+      color: var(--error-red);
+    }
+
+    .step-error .step-status {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+    }
+
+    .step-pending {
+      background: linear-gradient(135deg, var(--dewalt-gray) 0%, #404040 100%);
+      color: white;
+      border-color: var(--dewalt-gray);
+      box-shadow: 0 4px 12px rgba(44, 44, 44, 0.3);
+    }
+
+    .step-pending .step-icon {
+      background: var(--dewalt-yellow);
+      color: var(--dewalt-black);
+    }
+
+    .step-pending .step-status {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+    }
+
+    /* Step Details Cards */
+    .step-card {
+      background: white;
+      border-radius: 12px;
+      margin-bottom: 1rem;
+      border: 1px solid var(--dewalt-border);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .step-card:hover {
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      transform: translateY(-2px);
+    }
+
+    .step-card-header {
+      background: var(--dewalt-light-gray);
+      padding: 1rem;
+      border-bottom: 1px solid var(--dewalt-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .step-card-title {
+      font-weight: 600;
+      color: var(--dewalt-black);
+      font-size: 1rem;
+    }
+
+    .step-card-status {
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .step-card-body {
+      padding: 1rem;
+    }
+
+    .step-description {
+      color: var(--dewalt-gray);
+      margin-bottom: 1rem;
+      line-height: 1.5;
+    }
+
+    /* Substep Styles */
+    .substep {
+      margin-bottom: 0.75rem;
+    }
+
+    .substep-header {
+      background: var(--dewalt-light-gray);
+      padding: 0.75rem;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.2s ease;
+      border: 1px solid var(--dewalt-border);
+    }
+
+    .substep-header:hover {
+      background: var(--dewalt-yellow);
+      color: var(--dewalt-black);
+      transform: translateX(4px);
+    }
+
+    .substep-content {
+      background: white;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-top: 0.5rem;
+      border: 1px solid var(--dewalt-border);
+      white-space: pre-wrap;
+      line-height: 1.6;
+    }
+
+    /* Animations */
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(-20px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    .step-header {
+      animation: slideIn 0.3s ease;
+    }
+
+    /* Compact Layout */
+    .workflow-steps {
+      display: grid;
+      gap: 0.5rem;
+    }
+
+    .workflow-details {
+      margin-top: 1rem;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .workflow-container {
+        padding: 1rem;
+        margin: 0.5rem 0;
+      }
+      
+      .workflow-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+      }
+      
+      .step-header {
+        padding: 0.5rem 0.75rem;
+      }
+      
+      .step-title {
+        font-size: 0.9rem;
+      }
+      
+      .welcome-content {
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+      
+      .workflow-sidebar {
+        min-width: 100%;
+        max-height: 400px;
+      }
+      
+      .welcome-text {
+        flex: 0 0 100%;
+        min-width: 100%;
+      }
+    }
+
+    /* Knowledge Base Styles */
+    .list-group-item.active {
+      background: var(--primary-yellow);
+      border-color: var(--primary-yellow);
+      color: var(--text-black);
+    }
+
+    .list-group-item:hover {
+      background: var(--accent-gray);
+      border-color: var(--border-gray);
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .app-header {
+        padding: 1rem;
+        flex-direction: column;
+        gap: 1rem;
+      }
+      
+      .header-left,
+      .header-center,
+      .header-actions {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .welcome-section {
+        padding: 2rem 1rem;
+      }
+
+      .welcome-content {
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+
+      .avatar-section {
+        width: 100%;
+        text-align: center;
+      }
+
+      .welcome-title {
+        font-size: 2rem;
+      }
+
+      .input-section {
+        padding: 1rem;
+      }
+
+      .input-actions {
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .input-group {
+        flex-direction: column;
+        gap: 1rem;
+      }
+
+      .modal-dialog {
+        margin: 1rem;
+      }
+
+      .voice-circle {
+        width: 100px;
+        height: 100px;
+      }
+    }
+
+    /* Chat History Sidebar Styles */
+    .chat-history-sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 280px;
+      height: 100vh;
+      background: var(--bg-white);
+      border-right: 1px solid var(--border-gray);
+      box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+      transform: translateX(-100%);
+      transition: transform 0.3s ease;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-history-sidebar.open {
+      transform: translateX(0);
+    }
+
+    .chat-history-header {
+      background: var(--dewalt-yellow);
+      color: var(--dewalt-black);
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--dewalt-border);
+    }
+
+    .chat-history-header h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .chat-history-toggle {
+      background: none;
+      border: none;
+      color: var(--dewalt-black);
+      font-size: 1.2rem;
+      cursor: pointer;
+      padding: 0.5rem;
+      border-radius: 4px;
+      transition: background-color 0.2s;
+    }
+
+    .chat-history-toggle:hover {
+      background: rgba(0, 0, 0, 0.1);
+    }
+
+    .chat-history-content {
+      flex: 1;
+      padding: 1rem;
+      overflow-y: auto;
+    }
+
+    .chat-history-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .chat-history-actions .btn {
+      font-size: 0.8rem;
+      padding: 0.4rem 0.8rem;
+    }
+
+    .chat-sessions-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .chat-session-item {
+      background: var(--dewalt-light-gray);
+      border: 1px solid var(--dewalt-border);
+      border-radius: 6px;
+      padding: 0.6rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .chat-session-item:hover {
+      background: var(--dewalt-yellow);
+      border-color: var(--dewalt-yellow-dark);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .chat-session-item.active {
+      background: var(--dewalt-yellow);
+      border-color: var(--dewalt-yellow-dark);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .chat-session-prompt {
+      font-weight: 500;
+      color: var(--dewalt-black);
+      margin-bottom: 0.25rem;
+      font-size: 0.85rem;
+      line-height: 1.3;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       line-clamp: 2;
       -webkit-box-orient: vertical;
-    }
-    
-    .chat-history-status {
-      position: absolute;
-      top: 0.5rem;
-      right: 0.5rem;
-      font-size: 0.7rem;
-      padding: 0.2rem 0.4rem;
-      border-radius: 4px;
-      font-weight: 600;
-    }
-    
-    .status-completed {
-      background-color: var(--success);
-      color: var(--white);
-    }
-    
-    .status-running {
-      background-color: var(--primary);
-      color: var(--white);
-    }
-    
-    .main-content {
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(20px);
-      border-radius: 24px;
-      padding: 3rem;
-      box-shadow: 
-        0 25px 50px -12px rgba(0, 0, 0, 0.25),
-        0 0 0 1px rgba(255, 255, 255, 0.05);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      position: relative;
       overflow: hidden;
     }
-    
-    .main-content::before {
-      content: '';
-      position: absolute;
+
+    .chat-session-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.7rem;
+      color: var(--dewalt-gray);
+    }
+
+    .chat-session-date {
+      font-size: 0.65rem;
+    }
+
+    .chat-session-status {
+      padding: 0.15rem 0.4rem;
+      border-radius: 10px;
+      font-size: 0.65rem;
+      font-weight: 500;
+    }
+
+    .chat-session-status.active {
+      background: var(--success-green);
+      color: white;
+    }
+
+    .chat-session-status.completed {
+      background: var(--info-blue);
+      color: white;
+    }
+
+    .chat-session-status.error {
+      background: var(--error-red);
+      color: white;
+    }
+
+    .chat-history-toggle-btn {
+      background: var(--dewalt-yellow);
+      border: 1px solid var(--dewalt-yellow-dark);
+      color: var(--dewalt-black);
+      padding: 0.5rem;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-right: 1rem;
+      transition: all 0.2s;
+      font-size: 0.9rem;
+    }
+
+    .chat-history-toggle-btn:hover {
+      background: var(--dewalt-yellow-dark);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .chat-history-overlay {
+      position: fixed;
       top: 0;
       left: 0;
-      right: 0;
-      height: 4px;
-      background: linear-gradient(90deg, var(--gray-300) 0%, var(--gray-400) 100%);
-      border-radius: 24px 24px 0 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+      display: none;
     }
-    
-    .main-content.expanded {
-      margin-left: 0;
+
+    .chat-history-overlay.show {
+      display: block;
     }
-    
-    .sidebar-column {
+
+    @media (max-width: 768px) {
+      .chat-history-sidebar {
+        width: 100%;
+        transform: translateX(-100%);
+      }
+      
+      .chat-session-prompt {
+        font-size: 0.9rem;
+      }
+      
+      .chat-session-meta {
+        font-size: 0.75rem;
+      }
+    }
+
+    /* Main Content Frame Styles */
+    .main-content-frame {
+      padding: 2rem;
+      max-width: 100%;
+    }
+
+    .content-header-with-logo {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .beacon-logo {
+      width: 120px;
+      height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .beacon-logo-image {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    .header-text {
+      flex: 1;
+      text-align: left;
+    }
+
+    .content-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .main-title {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--dewalt-yellow);
+      margin-bottom: 0.5rem;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .main-subtitle {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin: 0;
+      line-height: 1.4;
+      text-align: left;
+    }
+
+    .templates-section {
+      margin-bottom: 2rem;
+    }
+
+    .templates-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .templates-header i {
+      color: var(--dewalt-yellow);
+      font-size: 1.2rem;
+      margin-right: 0.5rem;
+    }
+
+    .templates-header h3 {
+      color: var(--dewalt-yellow);
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .templates-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+    }
+
+    .template-card {
+      background: var(--bg-card);
+      border: 1px solid var(--dewalt-border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 120px;
+    }
+
+    .template-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(255, 215, 0, 0.2);
+      border-color: var(--dewalt-yellow);
+    }
+
+    .template-card i {
+      color: var(--dewalt-yellow);
+      font-size: 1.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .template-card h4 {
+      color: var(--text-primary);
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .template-card p {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin: 0;
+      line-height: 1.3;
+    }
+
+    .warning-section {
+      background: rgba(255, 193, 7, 0.1);
+      border: 1px solid var(--dewalt-yellow);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 2rem;
+      display: flex;
+      align-items: center;
+      color: var(--dewalt-yellow);
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .warning-section i {
+      margin-right: 0.5rem;
+      font-size: 1rem;
+    }
+
+    .research-question-section {
+      background: var(--bg-card);
+      border-radius: 20px;
+      padding: 2rem;
+      box-shadow: var(--shadow-soft);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+    }
+
+    .question-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .question-header i {
+      color: var(--dewalt-yellow);
+      font-size: 1.2rem;
+      margin-right: 0.5rem;
+    }
+
+    .question-header h3 {
+      color: var(--dewalt-yellow);
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .input-container {
+      position: relative;
+    }
+
+    .input-container textarea {
+      width: 100%;
+      min-height: 80px;
+      background: var(--bg-secondary);
+      border: 2px solid var(--dewalt-border);
+      border-radius: 12px;
+      padding: 1rem;
+      color: var(--text-primary);
+      font-size: 1rem;
+      resize: vertical;
       transition: all 0.3s ease;
     }
-    
-    .sidebar-column.collapsed {
-      width: 0;
-      padding: 0;
-      overflow: hidden;
+
+    .input-container textarea:focus {
+      outline: none;
+      border-color: var(--dewalt-yellow);
+      box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.1);
     }
-    
-    /* Responsive adjustments */
+
+    .input-container textarea::placeholder {
+      color: var(--text-muted);
+    }
+
+    .input-buttons {
+      position: absolute;
+      bottom: 1rem;
+      right: 1rem;
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .voice-btn, .submit-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 1rem;
+    }
+
+    .voice-btn {
+      background: var(--bg-secondary);
+      color: var(--dewalt-yellow);
+      border: 1px solid var(--dewalt-yellow);
+    }
+
+    .voice-btn:hover {
+      background: var(--dewalt-yellow);
+      color: var(--text-black);
+    }
+
+    .submit-btn {
+      background: var(--dewalt-yellow);
+      color: var(--text-black);
+    }
+
+    .submit-btn:hover {
+      background: var(--dewalt-orange);
+      transform: scale(1.05);
+    }
+
+    /* Responsive Design for Main Content Frame */
     @media (max-width: 768px) {
-      .chat-history-panel {
-        height: auto;
-        margin-bottom: 1rem;
+      .main-content-frame {
+        padding: 1rem;
       }
-      
-      .chat-history-list {
-        max-height: 300px;
+
+      .content-header-with-logo {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
       }
-      
-      .sidebar-toggle {
-        top: 1rem;
-        left: 0.5rem;
-        width: 40px;
-        height: 40px;
+
+      .main-title {
+        font-size: 2rem;
       }
-      
-      .sidebar-toggle.expanded {
-        left: calc(25% + 0.25rem);
+
+      .templates-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
       }
+
+      .template-card {
+        padding: 1rem;
+        min-height: 100px;
+      }
+
+      .template-card i {
+        font-size: 1.2rem;
+      }
+
+      .template-card h4 {
+        font-size: 0.9rem;
+      }
+
+      .template-card p {
+        font-size: 0.8rem;
+      }
+
+      .research-question-section {
+        padding: 1.5rem;
+      }
+
+      .input-buttons {
+        position: static;
+        margin-top: 1rem;
+        justify-content: center;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .templates-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Research Workflow Header Styles */
+    .workflow-header-section {
+      margin-bottom: 0.5rem;
+    }
+
+    .workflow-title {
+      display: flex;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .workflow-title i {
+      font-size: 1.2rem;
+    }
+
+    .workflow-topic {
+      background: var(--bg-secondary);
+      border: 1px solid var(--dewalt-border);
+      border-radius: 8px;
+      padding: 0.75rem;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      font-style: italic;
+      line-height: 1.4;
+      margin-bottom: 0.5rem;
+    }
+
+    .progress-text {
+      font-size: 0.8rem;
+      color: var(--dewalt-yellow);
+      margin-bottom: 0.5rem;
+      text-align: center;
+      font-weight: 600;
+      display: block;
+      line-height: 1.2;
     }
   </style>
 </head>
-<body class="p-4">
-<!-- Sidebar Toggle Button -->
-<button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" title="Toggle Chat History (H key)">
-  <i class="fas fa-chevron-left"></i>
-</button>
+<body>
+  <!-- Chat History Sidebar -->
+  <div id="chatHistorySidebar" class="chat-history-sidebar">
+    <div class="chat-history-header">
+      <h3><i class="fas fa-history"></i> Chat History</h3>
+      <button class="chat-history-toggle" onclick="toggleChatHistory()">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+    </div>
+    <div class="chat-history-content">
+      <div class="chat-history-actions">
+        <button class="btn btn-sm btn-primary" onclick="loadChatSessions()">
+          <i class="fas fa-sync"></i> Refresh
+        </button>
+        <button class="btn btn-sm btn-success" onclick="createNewSession()">
+          <i class="fas fa-plus"></i> New Chat
+        </button>
+      </div>
+      <div id="chatSessionsList" class="chat-sessions-list">
+        <!-- Chat sessions will be loaded here -->
+      </div>
+    </div>
+  </div>
 
-<div class="container-fluid">
-  <div class="row">
-    <!-- Left Sidebar - Chat History -->
-    <div class="col-md-3 sidebar-column" id="sidebarColumn">
-      <div class="chat-history-panel" id="chatHistoryPanel">
-        <h5 class="mb-3">📚 Research History</h5>
-        <div id="chatHistory" class="chat-history-list">
-          <!-- Chat history items will be loaded here -->
+  <!-- Header Section -->
+  <header class="app-header">
+    <div class="header-left">
+      <button class="chat-history-toggle-btn" onclick="toggleChatHistory()">
+        <i class="fas fa-history"></i>
+      </button>
+    </div>
+    <div class="header-center">
+      <div class="brand-banner">
+        <img src="/static/logo.svg" alt="Stanley Black and Decker" class="brand-logo" style="height: 40px; width: auto;">
+      </div>
+    </div>
+    <div class="header-actions">
+      <!-- Header buttons removed -->
+    </div>
+  </header>
+
+  <!-- Main Content Layout -->
+  <div class="main-layout">
+    <!-- Main Content Area -->
+    <div class="main-content">
+      <!-- Main Content Frame Layout -->
+      <div class="main-content-frame">
+        <!-- Header Section with Logo -->
+        <div class="content-header-with-logo">
+          <div class="beacon-logo">
+            <img src="/static/beacon-research-agent-logo.png" alt="BEACON Research Agent Logo" class="beacon-logo-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            <div class="logo-fallback" style="display: none; flex-direction: column; align-items: center; justify-content: center; color: var(--dewalt-yellow); font-size: 1.8rem; font-weight: bold;">
+              <div style="font-size: 2.2rem; margin-bottom: 0.3rem;">⚡</div>
+              <div style="font-size: 0.8rem; text-align: center; line-height: 1.2;">
+                <div>BEACON</div>
+                <div style="font-size: 0.6rem; margin-top: 0.2rem;">RESEARCH AGENT</div>
+              </div>
+            </div>
+          </div>
+          <div class="header-text">
+            <h1 class="main-title">Start Your Research</h1>
+            <p class="main-subtitle">Ask any research question and get comprehensive, AI-powered insights from multiple EXTERNAL <em>only</em> sources</p>
+          </div>
+        </div>
+
+        <!-- Quick Start Templates Section -->
+        <div class="templates-section">
+          <div class="templates-header">
+            <i class="fas fa-rocket"></i>
+            <h3>Quick Start Templates</h3>
+          </div>
+          <div class="templates-grid">
+            <div class="template-card" onclick="useTemplate('market')">
+              <i class="fas fa-chart-line"></i>
+              <h4>Market Analysis</h4>
+              <p>Industry trends & insights</p>
+            </div>
+            <div class="template-card" onclick="useTemplate('technology')">
+              <i class="fas fa-microchip"></i>
+              <h4>Technology</h4>
+              <p>Latest tech developments</p>
+            </div>
+            <div class="template-card" onclick="useTemplate('competitor')">
+              <i class="fas fa-users"></i>
+              <h4>Competitor</h4>
+              <p>Competitive intelligence</p>
+            </div>
+            <div class="template-card" onclick="useTemplate('strategy')">
+              <i class="fas fa-chess"></i>
+              <h4>Strategy</h4>
+              <p>Strategic planning & analysis</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Important Warning Section -->
+        <div class="warning-section">
+          <i class="fas fa-exclamation-triangle"></i>
+          <span>Important: All research results are AI-generated and should be verified for accuracy.</span>
+        </div>
+
+        <!-- Ask a Research Question Section -->
+        <div class="research-question-section">
+          <div class="question-header">
+            <i class="fas fa-question-circle"></i>
+            <h3>Ask a Research Question</h3>
+          </div>
+          <div class="input-container">
+            <textarea
+              id="promptInput"
+              placeholder="Describe your research topic here... (e.g., What are the latest developments in quantum computing?)"
+              rows="3"
+            ></textarea>
+            <div class="input-buttons">
+              <button class="voice-btn" onclick="startVoiceInput()" title="Voice Input">
+                <i class="fas fa-microphone"></i>
+              </button>
+              <button class="submit-btn" onclick="submitPrompt()" title="Submit Research">
+                <i class="fas fa-paper-plane"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div> <!-- End main-content -->
+
+    <!-- Right Sidebar -->
+    <div class="right-sidebar">
+      <!-- Research Workflow Header -->
+      <div class="workflow-header-section">
+        <div class="workflow-title" style="color: var(--dewalt-yellow); font-weight: bold; font-size: 1.1rem; margin-bottom: 1rem; display: flex; align-items: center;">
+          <i class="fas fa-bolt" style="margin-right: 0.5rem; color: var(--dewalt-orange);"></i>
+          <i class="fas fa-bolt" style="margin-right: 0.5rem; color: var(--dewalt-yellow);"></i>
+          <span>Research Workflow</span>
+        </div>
+        <div class="workflow-topic" id="sidebarTopic" style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem; font-style: italic; line-height: 1.4; background: var(--bg-secondary); padding: 0.75rem; border-radius: 8px; border: 1px solid var(--dewalt-border);">No research topic selected</div>
+      </div>
+
+      <!-- Research Workflow Progress -->
+      <div class="glass-card" style="padding: 1.5rem;">
+        <div class="workflow-progress" style="margin-bottom: 1rem;">
+          <div class="progress-text" id="sidebarProgressText" style="font-size: 0.8rem; color: var(--dewalt-yellow); margin-bottom: 0.5rem; text-align: center; font-weight: 600; display: block;">0/6 completed</div>
+          <div class="progress-bar-container" style="width: 100%; height: 6px; background: rgba(0, 0, 0, 0.2); border-radius: 3px; overflow: hidden;">
+            <div class="progress-bar-fill" id="sidebarProgressBar" style="width: 0%; height: 100%; background: var(--dewalt-yellow); transition: width 0.3s ease;"></div>
+          </div>
+        </div>
+        
+        <div class="workflow-status" id="sidebarStepStatusList" style="padding: 0.75rem; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--dewalt-border);">
+          <div class="step-header step-pending" style="display: flex; align-items: center; gap: 0.5rem;">
+            <div class="step-icon" style="color: var(--dewalt-yellow); font-size: 1.2rem;">○</div>
+            <div class="step-title" style="color: var(--text-primary); font-size: 0.75rem;">Waiting for research to begin...</div>
+            <div class="step-status pending" style="background: var(--dewalt-border); color: var(--text-primary); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: bold;">READY</div>
+          </div>
+        </div>
+      </div>
+
+    </div> <!-- End right-sidebar -->
+  </div> <!-- End main-layout -->
+
+
+  <!-- Input Section removed - moved to main content area -->
+
+  <!-- Research Results Section -->
+  <div id="researchResultsSection" style="display: none; margin: 20px auto; max-width: 1400px; padding: 0 20px;">
+    <div class="results-container">
+      <div class="results-header">
+        <h3><i class="fas fa-file-alt"></i> Research Report</h3>
+        <div class="results-actions">
+          <button class="btn btn-success btn-sm" onclick="downloadPDF()" title="Download PDF">
+            <i class="fas fa-file-pdf me-1"></i>PDF Report
+          </button>
+          <button class="btn btn-outline-secondary btn-sm me-2" onclick="downloadMarkdown()">
+            <i class="fas fa-file-alt me-1"></i>Download .md
+          </button>
+          <button class="btn btn-outline-secondary btn-sm" onclick="downloadHTML()">
+            <i class="fas fa-file-code me-1"></i>Download .html
+          </button>
+        </div>
+      </div>
+      <div class="results-content" id="researchResultsContent">
+        <!-- Research results will be displayed here -->
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Settings Modal removed -->
+
+  <!-- Knowledge Base Modal -->
+  <div class="modal fade" id="knowledgeBaseModal" tabindex="-1" aria-labelledby="knowledgeBaseModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="knowledgeBaseModalLabel">
+            <i class="fas fa-book me-2"></i>AI Knowledge Library
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-4">
+              <div class="list-group" id="knowledgeTabs" role="tablist">
+                <a class="list-group-item list-group-item-action active" id="research-guidelines-tab" data-bs-toggle="list" href="#research-guidelines" role="tab">
+                  <i class="fas fa-search me-2"></i>Research Guidelines
+                </a>
+                <a class="list-group-item list-group-item-action" id="best-practices-tab" data-bs-toggle="list" href="#best-practices" role="tab">
+                  <i class="fas fa-star me-2"></i>Best Practices
+                </a>
+                <a class="list-group-item list-group-item-action" id="faq-tab" data-bs-toggle="list" href="#faq" role="tab">
+                  <i class="fas fa-question-circle me-2"></i>FAQ
+                </a>
+                <a class="list-group-item list-group-item-action" id="examples-tab" data-bs-toggle="list" href="#examples" role="tab">
+                  <i class="fas fa-lightbulb me-2"></i>Examples
+                </a>
+              </div>
+            </div>
+            <div class="col-md-8">
+              <div class="tab-content" id="knowledgeContent">
+                <div class="tab-pane fade show active" id="research-guidelines" role="tabpanel">
+                  <h6 class="fw-bold">Research Guidelines</h6>
+                  <ul class="list-unstyled">
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Be specific in your research questions</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Include context and background information</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Specify the scope and timeframe of interest</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Mention any particular sources or perspectives needed</li>
+                  </ul>
+                  <div class="alert alert-info">
+                    <strong>Tip:</strong> The more specific your question, the better the research results will be.
+                  </div>
+                </div>
+                <div class="tab-pane fade" id="best-practices" role="tabpanel">
+                  <h6 class="fw-bold">Best Practices</h6>
+                  <div class="row">
+                    <div class="col-md-6">
+                      <h6>Question Formulation</h6>
+                      <ul>
+                        <li>Use clear, specific language</li>
+                        <li>Include relevant keywords</li>
+                        <li>Specify the type of information needed</li>
+                        <li>Mention any constraints or preferences</li>
+                      </ul>
+                    </div>
+                    <div class="col-md-6">
+                      <h6>Result Interpretation</h6>
+                      <ul>
+                        <li>Verify information from multiple sources</li>
+                        <li>Check publication dates for currency</li>
+                        <li>Consider source credibility</li>
+                        <li>Cross-reference with authoritative sources</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+                <div class="tab-pane fade" id="faq" role="tabpanel">
+                  <h6 class="fw-bold">Frequently Asked Questions</h6>
+                  <div class="accordion" id="faqAccordion">
+                    <div class="accordion-item">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                          How accurate are the research results?
+                        </button>
+                      </h2>
+                      <div id="faq1" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                          Our AI research agent provides comprehensive information from multiple sources, but all results should be verified for accuracy and currency. We recommend cross-referencing with authoritative sources.
+                        </div>
+                      </div>
+                    </div>
+                    <div class="accordion-item">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                          What sources does the agent use?
+                        </button>
+                      </h2>
+                      <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                          The agent uses three main sources: Tavily for web search, arXiv for academic papers, and Wikipedia for background information. You can configure which sources to use in the settings.
+                        </div>
+                      </div>
+                    </div>
+                    <div class="accordion-item">
+                      <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+                          How long does research take?
+                        </button>
+                      </h2>
+                      <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                          Research typically takes 2-5 minutes depending on the complexity and number of sources. You can track progress in real-time through the progress indicators.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="tab-pane fade" id="examples" role="tabpanel">
+                  <h6 class="fw-bold">Example Research Questions</h6>
+                  <div class="row">
+                    <div class="col-md-6">
+                      <h6>Academic Research</h6>
+                      <div class="card mb-3">
+                        <div class="card-body">
+                          <p class="card-text">"What are the latest developments in quantum computing algorithms for optimization problems?"</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <h6>Market Analysis</h6>
+                      <div class="card mb-3">
+                        <div class="card-body">
+                          <p class="card-text">"Analyze the current market trends and opportunities in renewable energy storage technologies."</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <h6>Technology Review</h6>
+                      <div class="card mb-3">
+                        <div class="card-body">
+                          <p class="card-text">"Review the state-of-the-art in machine learning applications for medical diagnosis."</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <h6>Industry Analysis</h6>
+                      <div class="card mb-3">
+                        <div class="card-body">
+                          <p class="card-text">"Research the impact of artificial intelligence on manufacturing processes in the automotive industry."</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
         </div>
       </div>
     </div>
-    
-    <!-- Main Content Area -->
-    <div class="col-md-9" id="mainContentColumn">
-      <div class="main-content" id="mainContent">
-        <h2 class="mb-4">🔧 Deep Research Agent</h2>
-
-
-
-  <!-- Prompt area con textarea de 4 líneas -->
-  <div class="mb-3">
-    <label for="promptInput" class="form-label">Prompt</label>
-    <div class="d-flex align-items-start gap-2">
-      <textarea
-        class="form-control"
-        id="promptInput"
-        rows="4"
-        placeholder="Describe your research topic here"
-        style="flex: 1"
-      ></textarea>
-      <button class="btn btn-primary" onclick="submitPrompt()">Submit</button>
-    </div>
-    <div class="form-text">Tip: Add 3–4 details to make your question more specific.</div>
   </div>
 
-  <div id="taskInfo" class="mb-3"></div>
-  <div id="stepStatusList" class="mb-4"></div>
-  <div id="stepDetails"></div>
-  <div id="finalOutput" class="mt-4"></div>
-</div>
+  <!-- Advanced Options Modal removed -->
+
+  <!-- Voice Input Modal -->
+  <div class="modal fade" id="voiceInputModal" tabindex="-1" aria-labelledby="voiceInputModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="voiceInputModalLabel">
+            <i class="fas fa-microphone me-2"></i>Voice Input
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body text-center">
+          <div class="mb-4">
+            <div class="voice-visualizer" id="voiceVisualizer">
+              <div class="voice-circle" id="voiceCircle">
+                <i class="fas fa-microphone fa-3x" id="microphoneIcon"></i>
+              </div>
+            </div>
+          </div>
+          <p class="mb-3">Click the microphone to start recording your research question</p>
+          <p class="text-muted small mb-3">Make sure your microphone is working and speak clearly</p>
+          <button class="btn btn-primary btn-lg" id="startRecording" onclick="startVoiceRecording()">
+            <i class="fas fa-microphone me-2"></i>Start Recording
+          </button>
+          <button class="btn btn-danger btn-lg" id="stopRecording" onclick="stopVoiceRecording()" style="display: none;">
+            <i class="fas fa-stop me-2"></i>Stop Recording
+          </button>
+          <div id="voiceStatus" class="mt-3"></div>
+          <div id="voiceText" class="mt-3" style="display: none;">
+            <h6>Recognized Text:</h6>
+            <div class="alert alert-info" id="recognizedText" style="text-align: left; white-space: pre-wrap;"></div>
+            <button class="btn btn-success" onclick="useVoiceText()">Use This Text</button>
+            <button class="btn btn-outline-secondary ms-2" onclick="startVoiceRecording()">Record Again</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
 <script>
+    // Global variables
 let currentTaskId = null;
 let currentTopic = null;
 let pollInterval = null;
 let finalReportMarkdown = "";
 const renderedSteps = new Map();
-let chatHistory = [];
-let sidebarCollapsed = false;
 
-// Load chat history on page load
-document.addEventListener('DOMContentLoaded', function() {
-  loadChatHistory();
-});
-
-// Keyboard shortcut for toggling sidebar (H key)
-document.addEventListener('keydown', function(event) {
-  // Only trigger if not typing in an input field
-  if (event.target.tagName !== 'INPUT' && event.target.tagName !== 'TEXTAREA') {
-    if (event.key.toLowerCase() === 'h') {
-      event.preventDefault();
-      toggleSidebar();
+    // Collapsible section functionality
+    function toggleSection(sectionId) {
+      const content = document.getElementById(sectionId);
+      const arrow = document.getElementById(sectionId + '-arrow');
+      
+      if (content.classList.contains('expanded')) {
+        content.classList.remove('expanded');
+        arrow.classList.add('rotated');
+      } else {
+        content.classList.add('expanded');
+        arrow.classList.remove('rotated');
+      }
     }
-  }
-});
 
-// Sidebar toggle functionality
-function toggleSidebar() {
-  const sidebarColumn = document.getElementById('sidebarColumn');
-  const chatHistoryPanel = document.getElementById('chatHistoryPanel');
-  const mainContentColumn = document.getElementById('mainContentColumn');
-  const mainContent = document.getElementById('mainContent');
-  const toggleButton = document.getElementById('sidebarToggle');
-  const toggleIcon = toggleButton.querySelector('i');
-  
-  sidebarCollapsed = !sidebarCollapsed;
-  
-  if (sidebarCollapsed) {
-    // Collapse sidebar
-    sidebarColumn.classList.add('collapsed');
-    chatHistoryPanel.classList.add('collapsed');
-    mainContentColumn.classList.remove('col-md-9');
-    mainContentColumn.classList.add('col-md-12');
-    mainContent.classList.add('expanded');
-    toggleButton.classList.remove('expanded');
-    toggleButton.classList.add('collapsed');
-    toggleIcon.classList.remove('fa-chevron-left');
-    toggleIcon.classList.add('fa-chevron-right');
-  } else {
-    // Expand sidebar
-    sidebarColumn.classList.remove('collapsed');
-    chatHistoryPanel.classList.remove('collapsed');
-    mainContentColumn.classList.remove('col-md-12');
-    mainContentColumn.classList.add('col-md-9');
-    mainContent.classList.remove('expanded');
-    toggleButton.classList.remove('collapsed');
-    toggleButton.classList.add('expanded');
-    toggleIcon.classList.remove('fa-chevron-right');
-    toggleIcon.classList.add('fa-chevron-left');
-  }
-}
+    // Header button functions
 
-function setTaskInfoGenerating(topic){
-  document.getElementById('taskInfo').innerHTML = `
-    <h5 class="d-flex align-items-center">
-      <span class="me-2">Generating steps for the search: <code>${topic}</code></span>
-      <span id="stepsIcon"><span class='spinner-border spinner-border-sm text-primary'></span></span>
-    </h5>
-  `;
-}
+    // exportResults function removed
 
-function setStepsGenerated(){
-  const stepsIcon = document.getElementById('stepsIcon');
-  if (stepsIcon) stepsIcon.textContent = '✅';
-}
+    // showSettings function removed
 
-function disableUI(disabled){
-  const btn = document.querySelector('button.btn.btn-primary');
-  const input = document.getElementById('promptInput');
-  if (btn) btn.disabled = disabled;
-  if (input) input.disabled = disabled;
-}
 
-function submitPrompt() {
-  const prompt = document.getElementById('promptInput').value;
-  if (!prompt) return;
+    // showAdvancedOptions function removed
+
+    function useTemplate(templateType) {
+      const templates = {
+        market: "Perform a comprehensive market research analysis on [TOPIC]. Include market size, growth trends, key players, market segmentation, opportunities, threats, and competitive landscape. Provide insights on market dynamics, consumer behavior, and future market projections.",
+        technology: "Research the latest technological developments and innovations in [TOPIC]. Include technical specifications, implementation challenges, industry adoption rates, emerging technologies, technical standards, and future technological trends. Analyze the impact on various industries and sectors.",
+        strategy: "Conduct a strategic research analysis on [TOPIC]. Include strategic planning frameworks, business models, competitive advantages, strategic positioning, market entry strategies, growth strategies, and strategic recommendations for stakeholders.",
+        competitor: "Perform a detailed competitor analysis of [TOPIC]. Include competitor identification, market share analysis, competitive positioning, strengths and weaknesses of key players, competitive strategies, pricing analysis, and competitive intelligence insights."
+      };
+      
+      const prompt = templates[templateType] || "Research [TOPIC]";
+      document.getElementById('promptInput').value = prompt;
+      
+      // Close the template panel after selection
+      const panel = document.getElementById('templateOptionsPanel');
+      const arrow = document.getElementById('quickTemplates-arrow');
+      panel.style.display = 'none';
+      arrow.className = 'fas fa-chevron-down section-arrow';
+    }
+
+    // Voice input function
+    function startVoiceInput() {
+      const voiceModal = new bootstrap.Modal(document.getElementById('voiceInputModal'));
+      voiceModal.show();
+    }
+
+    // Voice recording functions using Web Speech API
+    let recognition;
+    let isRecording = false;
+
+    function startVoiceRecording() {
+      // Check if browser supports speech recognition
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        document.getElementById('voiceStatus').innerHTML = '<div class="alert alert-danger">Speech recognition not supported in this browser. Please use Chrome or Edge.</div>';
+        return;
+      }
+
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRecognition();
+      
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = () => {
+        isRecording = true;
+        document.getElementById('startRecording').style.display = 'none';
+        document.getElementById('stopRecording').style.display = 'inline-block';
+        document.getElementById('voiceStatus').innerHTML = '<div class="alert alert-info">Listening... Speak now</div>';
+        document.getElementById('recognizedText').textContent = '';
+        document.getElementById('voiceText').style.display = 'none';
+        
+        // Add visual feedback
+        const voiceCircle = document.getElementById('voiceCircle');
+        const microphoneIcon = document.getElementById('microphoneIcon');
+        voiceCircle.classList.add('listening');
+        microphoneIcon.className = 'fas fa-microphone fa-3x';
+      };
+
+      recognition.onresult = (event) => {
+        let finalTranscript = '';
+        let interimTranscript = '';
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript;
+          } else {
+            interimTranscript += transcript;
+          }
+        }
+
+        if (finalTranscript) {
+          document.getElementById('recognizedText').textContent = finalTranscript;
+          document.getElementById('voiceText').style.display = 'block';
+          document.getElementById('voiceStatus').innerHTML = '<div class="alert alert-success">Speech recognized successfully!</div>';
+          
+          // Remove visual feedback
+          const voiceCircle = document.getElementById('voiceCircle');
+          voiceCircle.classList.remove('listening', 'processing');
+        } else if (interimTranscript) {
+          document.getElementById('recognizedText').textContent = interimTranscript + '...';
+          document.getElementById('voiceText').style.display = 'block';
+        }
+      };
+
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        let errorMessage = 'Speech recognition error. ';
+        switch(event.error) {
+          case 'no-speech':
+            errorMessage += 'No speech was detected. Please try again.';
+            break;
+          case 'audio-capture':
+            errorMessage += 'No microphone was found. Please check your microphone.';
+            break;
+          case 'not-allowed':
+            errorMessage += 'Microphone permission denied. Please allow microphone access.';
+            break;
+          case 'network':
+            errorMessage += 'Network error occurred. Please check your connection.';
+            break;
+          default:
+            errorMessage += 'An unknown error occurred.';
+        }
+        document.getElementById('voiceStatus').innerHTML = `<div class="alert alert-danger">${errorMessage}</div>`;
+        
+        // Remove visual feedback on error
+        const voiceCircle = document.getElementById('voiceCircle');
+        voiceCircle.classList.remove('listening', 'processing');
+        
+        resetRecordingButtons();
+      };
+
+      recognition.onend = () => {
+        isRecording = false;
+        
+        // Remove visual feedback
+        const voiceCircle = document.getElementById('voiceCircle');
+        voiceCircle.classList.remove('listening', 'processing');
+        
+        resetRecordingButtons();
+      };
+
+      try {
+        recognition.start();
+      } catch (error) {
+        console.error('Error starting speech recognition:', error);
+        document.getElementById('voiceStatus').innerHTML = '<div class="alert alert-danger">Error starting speech recognition. Please try again.</div>';
+        resetRecordingButtons();
+      }
+    }
+
+    function stopVoiceRecording() {
+      if (recognition && isRecording) {
+        recognition.stop();
+        isRecording = false;
+        resetRecordingButtons();
+        document.getElementById('voiceStatus').innerHTML = '<div class="alert alert-info">Processing speech...</div>';
+      }
+    }
+
+    function resetRecordingButtons() {
+      document.getElementById('startRecording').style.display = 'inline-block';
+      document.getElementById('stopRecording').style.display = 'none';
+      
+      // Reset visual feedback
+      const voiceCircle = document.getElementById('voiceCircle');
+      voiceCircle.classList.remove('listening', 'processing');
+    }
+
+    function useVoiceText() {
+      const recognizedText = document.getElementById('recognizedText').textContent;
+      document.getElementById('promptInput').value = recognizedText;
+      bootstrap.Modal.getInstance(document.getElementById('voiceInputModal')).hide();
+    }
+
+    // Main research submission function
+async function submitPrompt() {
+      const prompt = document.getElementById('promptInput').value.trim();
+      if (!prompt) {
+        alert('Please enter a research question');
+        return;
+      }
+
+      // Create a new chat session for this research (only when prompt is submitted)
+      try {
+        const response = await fetch('/chat/session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ prompt: prompt })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          currentSessionId = data.session_id;
+          
+          // Add user message to session
+          await addMessageToSession(currentSessionId, 'user', prompt);
+          
+          // Silently refresh the chat sessions list without notification
+          loadChatSessions();
+        }
+      } catch (error) {
+        console.error('Error creating chat session:', error);
+        // Continue with research even if chat session creation fails
+      }
 
   currentTopic = prompt;
+      
+      // Hide results section when starting new research
+      const resultsSection = document.getElementById('researchResultsSection');
+      if (resultsSection) {
+        resultsSection.style.display = 'none';
+      }
+      
   setTaskInfoGenerating(currentTopic);
   disableUI(true);
+
+  // Advanced options collection removed
 
   fetch('/generate_report', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt })
+    body: JSON.stringify({ 
+      prompt: prompt,
+      session_id: currentSessionId
+    })
   })
   .then(res => res.json())
   .then(data => {
     currentTaskId = data.task_id;
-
-    document.getElementById('stepStatusList').innerHTML = '';
-    document.getElementById('stepDetails').innerHTML = '';
-    document.getElementById('finalOutput').innerHTML = '';
+    // Clear sidebar step list
+    const sidebarStepList = document.getElementById('sidebarStepStatusList');
+    if (sidebarStepList) {
+      sidebarStepList.innerHTML = '';
+    }
+    // Reset topic display
+    const sidebarTopic = document.getElementById('sidebarTopic');
+    if (sidebarTopic) {
+      sidebarTopic.textContent = `Research Topic: ${prompt}`;
+    }
     renderedSteps.clear();
 
     if (pollInterval) clearInterval(pollInterval);
@@ -906,6 +2713,43 @@ function submitPrompt() {
   });
 }
 
+    // UI helper functions
+    function setTaskInfoGenerating(topic) {
+      const progressText = document.getElementById('progressText');
+      const sidebarProgressText = document.getElementById('sidebarProgressText');
+      const sidebarTopic = document.getElementById('sidebarTopic');
+      
+      if (progressText) {
+        progressText.textContent = `Generating research steps for: ${topic}`;
+      }
+      if (sidebarProgressText) {
+        sidebarProgressText.textContent = `0/6 completed`;
+      }
+      if (sidebarTopic) {
+        sidebarTopic.textContent = `Research Topic: ${topic}`;
+      }
+    }
+
+    function setStepsGenerated() {
+      const progressText = document.getElementById('progressText');
+      const sidebarProgressText = document.getElementById('sidebarProgressText');
+      if (progressText) {
+        progressText.textContent = 'Research steps generated - executing workflow...';
+      }
+      if (sidebarProgressText) {
+        sidebarProgressText.textContent = '0/6 completed';
+      }
+      // Keep the topic visible - don't change it here
+    }
+
+    function disableUI(disabled) {
+      const input = document.getElementById('promptInput');
+      const submitBtn = document.querySelector('.input-btn:not(.secondary)');
+      if (input) input.disabled = disabled;
+      if (submitBtn) submitBtn.disabled = disabled;
+    }
+
+    // Progress tracking functions (existing functionality)
 function fetchProgress() {
   if (!currentTaskId) return;
 
@@ -918,6 +2762,9 @@ function fetchProgress() {
         setStepsGenerated();
       }
 
+      // Update progress
+      updateSidebarProgress(steps);
+
       steps.forEach((step, index) => {
         const stepKey = `${step.title}-${step.status}-${step.substeps.length}`;
         if (renderedSteps.get(index) === stepKey) return;
@@ -928,17 +2775,32 @@ function fetchProgress() {
                      step.status === 'running' ? '<span class="spinner-border spinner-border-sm text-warning"></span>' :
                      step.status === 'error' ? '❌' : '🕓';
 
-        const rowId = `step-row-${index}`;
-        let row = document.getElementById(rowId);
-        if (!row) {
-          row = document.createElement('div');
-          row.id = rowId;
-          row.className = `step-header ${getStatusClass(step.status)}`;
-          row.innerHTML = `${icon} ${step.title}`;
-          document.getElementById('stepStatusList').appendChild(row);
+        // Only update sidebar, no bottom section
+
+        // Update sidebar
+        const sidebarRowId = `sidebar-step-row-${index}`;
+        let sidebarRow = document.getElementById(sidebarRowId);
+        const sidebarIcon = step.status === 'done' ? '✓' :
+                           step.status === 'running' ? '⟳' :
+                           step.status === 'error' ? '✗' : '○';
+        
+        if (!sidebarRow) {
+          sidebarRow = document.createElement('div');
+          sidebarRow.id = sidebarRowId;
+          sidebarRow.className = `step-header step-${step.status}`;
+          sidebarRow.innerHTML = `
+            <div class="step-icon">${sidebarIcon}</div>
+            <div class="step-title">${step.title}</div>
+            <div class="step-status ${step.status}">${step.status.toUpperCase()}</div>
+          `;
+          document.getElementById('sidebarStepStatusList').appendChild(sidebarRow);
         } else {
-          row.className = `step-header ${getStatusClass(step.status)}`;
-          row.innerHTML = `${icon} ${step.title}`;
+          sidebarRow.className = `step-header step-${step.status}`;
+          sidebarRow.innerHTML = `
+            <div class="step-icon">${sidebarIcon}</div>
+            <div class="step-title">${step.title}</div>
+            <div class="step-status ${step.status}">${step.status.toUpperCase()}</div>
+          `;
         }
 
         const cardId = `step-card-${index}`;
@@ -946,10 +2808,11 @@ function fetchProgress() {
         const substepsHTML = step.substeps.map((sub, j) => `
           <div class="substep">
             <div class="substep-header" data-bs-toggle="collapse" data-bs-target="#substep-${index}-${j}" aria-expanded="false" aria-controls="substep-${index}-${j}">
-              ➕ ${sub.title}
+              <span>${sub.title}</span>
+              <i class="fas fa-chevron-down"></i>
             </div>
             <div id="substep-${index}-${j}" class="collapse">
-              <div class="bg-light p-2 rounded" style="white-space:pre-wrap;">${marked.parse(sub.content)}</div>
+              <div class="substep-content">${sub.content.includes('<h2') || sub.content.includes('<table') || sub.content.includes('<a href') ? sub.content : marked.parse(sub.content)}</div>
             </div>
           </div>
         `).join('');
@@ -957,20 +2820,31 @@ function fetchProgress() {
         if (!card) {
           card = document.createElement('div');
           card.id = cardId;
-          card.className = `card mb-3 ${getStepClass(step.status)}`;
+          card.className = `step-card ${getStepClass(step.status)}`;
           card.innerHTML = `
-            <div class="card-header">${step.title} — ${step.status.toUpperCase()}</div>
-            <div class="card-body">
-              <p>${step.description}</p>
+            <div class="step-card-header">
+              <div class="step-card-title">${step.title}</div>
+              <div class="step-card-status">${step.status.toUpperCase()}</div>
+            </div>
+            <div class="step-card-body">
+              <div class="step-description">${step.description}</div>
               ${substepsHTML}
             </div>
           `;
           document.getElementById('stepDetails').appendChild(card);
+          
+          // Add bold line separator between step 1 and step 2
+          if (index === 1) {
+            const separator = document.createElement('div');
+            separator.style.cssText = 'width: 100%; height: 3px; background-color: #000; margin: 20px 0; font-weight: bold;';
+            document.getElementById('stepDetails').appendChild(separator);
+          }
         } else {
-          card.className = `card mb-3 ${getStepClass(step.status)}`;
-          card.querySelector('.card-header').textContent = `${step.title} — ${step.status.toUpperCase()}`;
-          card.querySelector('.card-body').innerHTML = `
-            <p>${step.description}</p>
+          card.className = `step-card ${getStepClass(step.status)}`;
+          card.querySelector('.step-card-title').textContent = step.title;
+          card.querySelector('.step-card-status').textContent = step.status.toUpperCase();
+          card.querySelector('.step-card-body').innerHTML = `
+            <div class="step-description">${step.description}</div>
             ${substepsHTML}
           `;
         }
@@ -1005,15 +2879,86 @@ function fetchTaskStatus() {
 
       if (task.status === 'done' && task.result?.html_report) {
         finalReportMarkdown = task.result.html_report;
+        
+        // Show the results section
+        const resultsSection = document.getElementById('researchResultsSection');
+        if (resultsSection) {
+          resultsSection.style.display = 'block';
+          resultsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Populate the results content
+        const resultsContent = document.getElementById('researchResultsContent');
+        if (resultsContent) {
+          // Parse the markdown content
+          let parsedContent = marked.parse(finalReportMarkdown);
+          
+          // Modify the "Your next task: Writer agent" text to "Final Step - Writer agent"
+          parsedContent = parsedContent.replace(
+            /Your next task: Writer agent/g, 
+            'Final Step - Writer agent'
+          );
+          
+          // Make "Research (Step" text bold
+          parsedContent = parsedContent.replace(
+            /Research \(Step \d+\)/g, 
+            '<span class="research-step-header">$&</span>'
+          );
+          
+          // Make "Your next task" text bold and blue - more comprehensive approach
+          parsedContent = parsedContent.replace(
+            /Your next task: Writer agent: Generate the final comprehensive Markdown report with inline citations and a complete References section with clickable links\./g, 
+            '<span class="research-step-header">$&</span>'
+          );
+          
+          // Also handle any "Your next task" text pattern
+          parsedContent = parsedContent.replace(
+            /Your next task:.*?\./g, 
+            '<span class="research-step-header">$&</span>'
+          );
+          
+          // Handle "Final Step" text if it exists
+          parsedContent = parsedContent.replace(
+            /Final Step - Writer agent:.*?\./g, 
+            '<span class="research-step-header">$&</span>'
+          );
+          
+          resultsContent.innerHTML = parsedContent;
+          
+          // Additional pass to ensure "Your next task" text is styled
+          setTimeout(() => {
+            const allText = resultsContent.textContent || resultsContent.innerText || '';
+            if (allText.includes('Your next task')) {
+              const walker = document.createTreeWalker(
+                resultsContent,
+                NodeFilter.SHOW_TEXT,
+                null,
+                false
+              );
+              
+              let node;
+              while (node = walker.nextNode()) {
+                if (node.textContent.includes('Your next task')) {
+                  const parent = node.parentNode;
+                  if (parent && !parent.classList.contains('research-step-header')) {
+                    const newSpan = document.createElement('span');
+                    newSpan.className = 'research-step-header';
+                    newSpan.textContent = node.textContent;
+                    parent.replaceChild(newSpan, node);
+                  }
+                }
+              }
+            }
+          }, 100);
+        }
+        
+        // Also update the old finalOutput for backward compatibility
         document.getElementById('finalOutput').innerHTML = `
-          <h4>Final Report</h4>
+              <h4>Research Report</h4>
           <div class="mb-3">
             <div class="btn-group me-2" role="group">
-              <button class="btn btn-pdf btn-sm" onclick="downloadPDF()" title="Download PDF (Abstract to References)">
+                  <button class="btn btn-success btn-sm" onclick="downloadPDF()" title="Download PDF">
                 <i class="fas fa-file-pdf me-1"></i>PDF Report
-              </button>
-              <button class="btn btn-pdf btn-sm" onclick="downloadFullPDF()" title="Download Full PDF (including User Prompt)">
-                <i class="fas fa-file-pdf me-1"></i>Full PDF
               </button>
             </div>
             <button class="btn btn-outline-secondary btn-sm me-2" onclick="downloadMarkdown()">
@@ -1025,9 +2970,6 @@ function fetchTaskStatus() {
           </div>
           <div id="finalReport">${marked.parse(finalReportMarkdown)}</div>
         `;
-        
-        // Refresh chat history when a task is completed
-        loadChatHistory();
       }
     });
 }
@@ -1044,11 +2986,12 @@ function getStepClass(status) {
          status === 'error' ? 'step-error' : 'step-pending';
 }
 
+    // Download functions (existing functionality)
 function downloadMarkdown() {
   const blob = new Blob([finalReportMarkdown], { type: 'text/markdown' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = `final_report_${currentTaskId}.md`;
+      link.download = `research_report_${currentTaskId}.md`;
   link.click();
 }
 
@@ -1057,362 +3000,818 @@ function downloadHTML() {
   const blob = new Blob([htmlContent], { type: 'text/html' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = `final_report_${currentTaskId}.html`;
+      link.download = `research_report_${currentTaskId}.html`;
   link.click();
 }
 
-function extractReportContent(markdown) {
-  // Split the markdown into lines
-  const lines = markdown.split('\n');
-  let startIndex = -1;
-  let endIndex = -1;
-  
-  // Find the start of Abstract section
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i].trim().toLowerCase().startsWith('## abstract')) {
-      startIndex = i;
-      break;
+// Fallback function to load jsPDF from alternative CDN
+function loadJsPDFFallback() {
+  console.log('Primary jsPDF CDN failed, trying fallback...');
+  const script = document.createElement('script');
+  script.src = 'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js';
+  script.onload = function() {
+    console.log('Fallback jsPDF loaded successfully');
+    // Make sure jsPDF is available globally
+    if (typeof window.jsPDF === 'undefined' && typeof jsPDF !== 'undefined') {
+      window.jsPDF = jsPDF;
     }
-  }
-  
-  // Find the end of References section
-  for (let i = lines.length - 1; i >= 0; i--) {
-    if (lines[i].trim().toLowerCase().startsWith('## references')) {
-      // Find the end of the references section (next ## or end of file)
-      for (let j = i + 1; j < lines.length; j++) {
-        if (lines[j].trim().startsWith('##') && lines[j].trim() !== '## References') {
-          endIndex = j;
-          break;
-        }
-      }
-      if (endIndex === -1) {
-        endIndex = lines.length;
-      }
-      break;
-    }
-  }
-  
-  // If we found both start and end, extract the content
-  if (startIndex !== -1 && endIndex !== -1) {
-    const extractedLines = lines.slice(startIndex, endIndex);
-    return extractedLines.join('\n');
-  }
-  
-  // Fallback: return the original markdown
-  return markdown;
+  };
+  script.onerror = function() {
+    console.error('All jsPDF CDNs failed to load');
+    alert('PDF library failed to load from all sources. Please check your internet connection and refresh the page.');
+  };
+  document.head.appendChild(script);
 }
 
 function downloadPDF() {
+  console.log('Starting PDF generation...');
+  
   if (!finalReportMarkdown) {
     alert('No report available to download');
     return;
   }
 
-  // Show loading state
-  const pdfButton = document.querySelector('.btn-pdf');
+  // Find the specific PDF Report button that was clicked
+  const pdfButtons = document.querySelectorAll('button[onclick="downloadPDF()"]');
+  const pdfButton = pdfButtons[0] || document.querySelector('.btn-success');
   const originalText = pdfButton.innerHTML;
   pdfButton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Generating PDF...';
   pdfButton.disabled = true;
 
-  // Extract content from Abstract to References
-  const cleanMarkdown = extractReportContent(finalReportMarkdown);
-
   try {
-    // Parse markdown to HTML
-    const htmlContent = marked.parse(cleanMarkdown);
+    console.log('Extracting report content...');
+    const cleanMarkdown = extractReportContent(finalReportMarkdown);
+    console.log('Clean markdown length:', cleanMarkdown.length);
     
-    // Create a temporary container for PDF generation
-    const tempContainer = document.createElement('div');
-    tempContainer.className = 'pdf-content';
-    tempContainer.style.position = 'absolute';
-    tempContainer.style.left = '-9999px';
-    tempContainer.style.top = '0';
-    tempContainer.style.width = '800px';
-    tempContainer.style.backgroundColor = 'white';
-    tempContainer.innerHTML = htmlContent;
-    
-    // Add to document temporarily
-    document.body.appendChild(tempContainer);
-    
-    // Generate PDF using html2canvas and jsPDF
-    html2canvas(tempContainer, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: '#ffffff',
-      width: 800,
-      height: tempContainer.scrollHeight
-    }).then(canvas => {
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 295; // A4 height in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      
-      let position = 0;
-      
-      // Add first page
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-      
-      // Add additional pages if needed
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-      
-      // Download the PDF
-      const fileName = `research_report_${currentTaskId || 'report'}_${new Date().toISOString().split('T')[0]}.pdf`;
-      pdf.save(fileName);
-      
-      // Clean up
-      document.body.removeChild(tempContainer);
-      
-      // Reset button
+    if (!cleanMarkdown || cleanMarkdown.trim().length === 0) {
+      alert('No content found to generate PDF. Please ensure the report has been generated.');
       pdfButton.innerHTML = originalText;
       pdfButton.disabled = false;
-      
-    }).catch(error => {
-      console.error('Error generating PDF:', error);
-      alert('Error generating PDF. Please try again.');
-      
-      // Clean up
-      if (document.body.contains(tempContainer)) {
-        document.body.removeChild(tempContainer);
-      }
-      
-      // Reset button
-      pdfButton.innerHTML = originalText;
-      pdfButton.disabled = false;
-    });
+      return;
+    }
+    
+    // Use server-side PDF generation
+    generateServerPDF(cleanMarkdown, pdfButton, originalText, 'report');
     
   } catch (error) {
-    console.error('Error preparing PDF:', error);
-    alert('Error preparing PDF. Please try again.');
-    
-    // Reset button
+    console.error('Error in downloadPDF:', error);
+    alert(`Error generating PDF: ${error.message || 'Unknown error'}. Please try again.`);
     pdfButton.innerHTML = originalText;
     pdfButton.disabled = false;
   }
 }
 
-function downloadFullPDF() {
-  if (!finalReportMarkdown) {
-    alert('No report available to download');
-    return;
-  }
-
-  // Show loading state
-  const pdfButtons = document.querySelectorAll('.btn-pdf');
-  const originalTexts = Array.from(pdfButtons).map(btn => btn.innerHTML);
-  pdfButtons.forEach(btn => {
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Generating PDF...';
-    btn.disabled = true;
+function generateServerPDF(markdownContent, button, originalText, type = 'report') {
+  console.log('Generating PDF on server...');
+  
+  // Get the original user prompt
+  const originalPrompt = document.getElementById('promptInput').value.trim();
+  
+  fetch('/generate_pdf', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      content: markdownContent,
+      type: type,
+      original_prompt: originalPrompt
+    })
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.status}`);
+    }
+    return response.blob();
+  })
+  .then(blob => {
+    console.log('PDF generated successfully');
+    
+    // Create download link with better filename
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    
+    // Create a more readable filename
+    const timestamp = new Date().toISOString().split('T')[0];
+    const readableFilename = `Research_Report_${timestamp}.pdf`;
+    link.download = readableFilename;
+    
+    // Set attributes to ensure proper download behavior
+    link.setAttribute('download', readableFilename);
+    link.style.display = 'none';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    
+    // Reset button
+    button.innerHTML = originalText;
+    button.disabled = false;
+  })
+  .catch(error => {
+    console.error('Error generating PDF:', error);
+    alert(`Error generating PDF: ${error.message}. Please try again.`);
+    button.innerHTML = originalText;
+    button.disabled = false;
   });
+}
 
+function generateSimplePDF(markdownContent, button, originalText, type = 'report') {
   try {
-    // Parse markdown to HTML (full report)
-    const htmlContent = marked.parse(finalReportMarkdown);
+    console.log('Creating simple PDF...');
+    console.log('Markdown content length:', markdownContent ? markdownContent.length : 'undefined');
     
-    // Create a temporary container for PDF generation
-    const tempContainer = document.createElement('div');
-    tempContainer.className = 'pdf-content';
-    tempContainer.style.position = 'absolute';
-    tempContainer.style.left = '-9999px';
-    tempContainer.style.top = '0';
-    tempContainer.style.width = '800px';
-    tempContainer.style.backgroundColor = 'white';
-    tempContainer.innerHTML = htmlContent;
-    
-    // Add to document temporarily
-    document.body.appendChild(tempContainer);
-    
-    // Generate PDF using html2canvas and jsPDF
-    html2canvas(tempContainer, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: '#ffffff',
-      width: 800,
-      height: tempContainer.scrollHeight
-    }).then(canvas => {
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 295; // A4 height in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      
-      let position = 0;
-      
-      // Add first page
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-      
-      // Add additional pages if needed
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
+    // Check if jsPDF is available and wait for it to load
+    if (typeof jsPDF === 'undefined' && typeof window.jsPDF === 'undefined') {
+      console.log('jsPDF not loaded yet, waiting...');
+      // Try to load fallback if not already attempted
+      if (!window.jsPDFFallbackAttempted) {
+        window.jsPDFFallbackAttempted = true;
+        loadJsPDFFallback();
       }
       
-      // Download the PDF
-      const fileName = `full_research_report_${currentTaskId || 'report'}_${new Date().toISOString().split('T')[0]}.pdf`;
+      // Wait for jsPDF to load
+      let attempts = 0;
+      const maxAttempts = 100; // 10 seconds max wait
+      
+      const waitForJsPDF = () => {
+        if (typeof jsPDF !== 'undefined' || typeof window.jsPDF !== 'undefined') {
+          console.log('jsPDF loaded successfully');
+          generateSimplePDF(markdownContent, button, originalText, type);
+          return;
+        }
+        
+        attempts++;
+        if (attempts >= maxAttempts) {
+          console.error('jsPDF failed to load after waiting');
+          alert('PDF library failed to load. Please refresh the page and try again. If the problem persists, try using a different browser or check your internet connection.');
+          button.innerHTML = originalText;
+          button.disabled = false;
+          return;
+        }
+        
+        setTimeout(waitForJsPDF, 100);
+      };
+      
+      waitForJsPDF();
+      return;
+    }
+    
+    if (!markdownContent || markdownContent.trim().length === 0) {
+      console.error('No markdown content provided');
+      alert('No content available to generate PDF.');
+      button.innerHTML = originalText;
+      button.disabled = false;
+      return;
+    }
+    
+    console.log('Initializing jsPDF...');
+    const jsPDFClass = typeof jsPDF !== 'undefined' ? jsPDF : window.jsPDF;
+    const pdf = new jsPDFClass('p', 'mm', 'a4');
+    console.log('jsPDF initialized successfully');
+    
+    const pageWidth = 210;
+    const pageHeight = 295;
+    const margin = 20;
+    const maxWidth = pageWidth - (margin * 2);
+    
+    let yPosition = margin;
+    const lineHeight = 6;
+    
+    try {
+      // Add title
+      console.log('Adding title...');
+      pdf.setFontSize(16);
+      pdf.setFont(undefined, 'bold');
+      pdf.text('Research Report', margin, yPosition);
+      yPosition += lineHeight * 2;
+      
+      // Add date
+      console.log('Adding date...');
+      pdf.setFontSize(10);
+      pdf.setFont(undefined, 'normal');
+      pdf.text(`Generated on: ${new Date().toLocaleDateString()}`, margin, yPosition);
+      yPosition += lineHeight * 2;
+      
+      // Process markdown content
+      console.log('Processing markdown content...');
+      const lines = markdownContent.split('\n');
+      console.log('Number of lines to process:', lines.length);
+      pdf.setFontSize(12);
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        
+        if (line === '') {
+          yPosition += lineHeight;
+          continue;
+        }
+        
+        // Handle headers
+        if (line.startsWith('#')) {
+          const headerMatch = line.match(/^#+/);
+          if (headerMatch) {
+            const headerLevel = headerMatch[0].length;
+            const headerText = line.replace(/^#+\s*/, '');
+            
+            pdf.setFontSize(Math.max(10, 16 - headerLevel));
+            pdf.setFont(undefined, 'bold');
+            
+            // Check if we need a new page
+            if (yPosition + lineHeight * 2 > pageHeight - margin) {
+              pdf.addPage();
+              yPosition = margin;
+            }
+            
+            pdf.text(headerText, margin, yPosition);
+            yPosition += lineHeight * 2;
+            continue;
+          }
+        }
+        
+        // Handle regular text
+        pdf.setFontSize(12);
+        pdf.setFont(undefined, 'normal');
+        
+        // Check if we need a new page
+        if (yPosition + lineHeight > pageHeight - margin) {
+          pdf.addPage();
+          yPosition = margin;
+        }
+        
+        // Split long lines
+        const words = line.split(' ');
+        let currentLine = '';
+        
+        for (const word of words) {
+          const testLine = currentLine + (currentLine ? ' ' : '') + word;
+          const textWidth = pdf.getTextWidth(testLine);
+          
+          if (textWidth > maxWidth && currentLine) {
+            pdf.text(currentLine, margin, yPosition);
+            yPosition += lineHeight;
+            
+            // Check if we need a new page
+            if (yPosition + lineHeight > pageHeight - margin) {
+              pdf.addPage();
+              yPosition = margin;
+            }
+            
+            currentLine = word;
+          } else {
+            currentLine = testLine;
+          }
+        }
+        
+        if (currentLine) {
+          pdf.text(currentLine, margin, yPosition);
+          yPosition += lineHeight;
+        }
+      }
+      
+      console.log('Content processing completed, saving PDF...');
+      const fileName = `research_report_${currentTaskId || 'report'}_${new Date().toISOString().split('T')[0]}.pdf`;
+      
+      console.log('Saving PDF:', fileName);
       pdf.save(fileName);
       
-      // Clean up
-      document.body.removeChild(tempContainer);
+      button.innerHTML = originalText;
+      button.disabled = false;
+      console.log('PDF generation completed successfully');
       
-      // Reset buttons
-      pdfButtons.forEach((btn, index) => {
-        btn.innerHTML = originalTexts[index];
-        btn.disabled = false;
-      });
-      
-    }).catch(error => {
-      console.error('Error generating PDF:', error);
-      alert('Error generating PDF. Please try again.');
-      
-      // Clean up
-      if (document.body.contains(tempContainer)) {
-        document.body.removeChild(tempContainer);
-      }
-      
-      // Reset buttons
-      pdfButtons.forEach((btn, index) => {
-        btn.innerHTML = originalTexts[index];
-        btn.disabled = false;
-      });
-    });
+    } catch (contentError) {
+      console.error('Error processing content:', contentError);
+      alert(`Error processing content: ${contentError.message || 'Unknown error'}. Please try again.`);
+      button.innerHTML = originalText;
+      button.disabled = false;
+    }
     
   } catch (error) {
-    console.error('Error preparing PDF:', error);
-    alert('Error preparing PDF. Please try again.');
+    console.error('Error in generateSimplePDF:', error);
+    console.error('Error stack:', error.stack);
+    alert(`Error generating PDF: ${error.message || 'Unknown error'}. Please check the console for details.`);
+    button.innerHTML = originalText;
+    button.disabled = false;
+  }
+}
+
+
+function generateFallbackPDF(markdownContent, button, originalText, type = 'report') {
+  try {
+    console.log('Using fallback PDF generation method...');
     
-    // Reset buttons
-    pdfButtons.forEach((btn, index) => {
-      btn.innerHTML = originalTexts[index];
-      btn.disabled = false;
-    });
-  }
-}
-
-// Chat History Functions
-function loadChatHistory() {
-  fetch('/chat_history')
-    .then(res => res.json())
-    .then(data => {
-      chatHistory = data.history || [];
-      renderChatHistory();
-    })
-    .catch(err => {
-      console.error('Error loading chat history:', err);
-      document.getElementById('chatHistory').innerHTML = '<p class="text-muted">No chat history available</p>';
-    });
-}
-
-function renderChatHistory() {
-  const historyContainer = document.getElementById('chatHistory');
-  
-  if (chatHistory.length === 0) {
-    historyContainer.innerHTML = '<p class="text-muted text-center">No research history yet</p>';
-    return;
-  }
-  
-  const historyHTML = chatHistory.map(item => `
-    <div class="chat-history-item" onclick="loadHistoryItem('${item.id}')" data-task-id="${item.id}">
-      <div class="chat-history-status status-completed">✓</div>
-      <div class="chat-history-title">${item.title}</div>
-      <div class="chat-history-date">${formatDate(item.created_at)}</div>
-      <div class="chat-history-prompt">${item.prompt}</div>
-    </div>
-  `).join('');
-  
-  historyContainer.innerHTML = historyHTML;
-}
-
-function loadHistoryItem(taskId) {
-  // Remove active class from all items
-  document.querySelectorAll('.chat-history-item').forEach(item => {
-    item.classList.remove('active');
-  });
-  
-  // Add active class to clicked item
-  document.querySelector(`[data-task-id="${taskId}"]`).classList.add('active');
-  
-  // Load the specific history item
-  fetch(`/chat_history/${taskId}`)
-    .then(res => res.json())
-    .then(data => {
-      // Clear current content
-      document.getElementById('stepStatusList').innerHTML = '';
-      document.getElementById('stepDetails').innerHTML = '';
-      document.getElementById('taskInfo').innerHTML = '';
+    // Check if jsPDF is available and wait for it to load
+    if (typeof jsPDF === 'undefined') {
+      console.log('jsPDF not loaded yet, waiting...');
+      // Try to load fallback if not already attempted
+      if (!window.jsPDFFallbackAttempted) {
+        window.jsPDFFallbackAttempted = true;
+        loadJsPDFFallback();
+      }
       
-      // Display the loaded report
-      if (data.final_report) {
-        finalReportMarkdown = data.final_report;
-        document.getElementById('finalOutput').innerHTML = `
-          <h4>📄 ${data.title}</h4>
-          <div class="mb-3">
-            <div class="btn-group me-2" role="group">
-              <button class="btn btn-pdf btn-sm" onclick="downloadPDF()" title="Download PDF (Abstract to References)">
-                <i class="fas fa-file-pdf me-1"></i>PDF Report
-              </button>
-              <button class="btn btn-pdf btn-sm" onclick="downloadFullPDF()" title="Download Full PDF (including User Prompt)">
-                <i class="fas fa-file-pdf me-1"></i>Full PDF
-              </button>
-            </div>
-            <button class="btn btn-outline-secondary btn-sm me-2" onclick="downloadMarkdown()">
-              <i class="fas fa-file-alt me-1"></i>Download .md
-            </button>
-            <button class="btn btn-outline-secondary btn-sm" onclick="downloadHTML()">
-              <i class="fas fa-file-code me-1"></i>Download .html
-            </button>
-          </div>
-          <div id="finalReport">${marked.parse(finalReportMarkdown)}</div>
-        `;
+      // Wait for jsPDF to load
+      let attempts = 0;
+      const maxAttempts = 100; // 10 seconds max wait
+      
+      const waitForJsPDF = () => {
+        if (typeof jsPDF !== 'undefined') {
+          console.log('jsPDF loaded successfully');
+          generateFallbackPDF(markdownContent, button, originalText, type);
+          return;
+        }
+        
+        attempts++;
+        if (attempts >= maxAttempts) {
+          console.error('jsPDF failed to load after waiting');
+          alert('PDF library failed to load. Please refresh the page and try again. If the problem persists, try using a different browser or check your internet connection.');
+          button.innerHTML = originalText;
+          button.disabled = false;
+          return;
+        }
+        
+        setTimeout(waitForJsPDF, 100);
+      };
+      
+      waitForJsPDF();
+      return;
+    }
+    
+    if (!markdownContent || markdownContent.trim().length === 0) {
+      alert('No content available to generate PDF.');
+      button.innerHTML = originalText;
+      button.disabled = false;
+      return;
+    }
+    
+    console.log('Creating fallback PDF...');
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    
+    // Simple text addition without complex processing
+    pdf.setFontSize(16);
+    pdf.setFont(undefined, 'bold');
+    pdf.text('Research Report', 20, 20);
+    
+    pdf.setFontSize(12);
+    pdf.setFont(undefined, 'normal');
+    pdf.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 30);
+    
+    // Add content as simple text blocks
+    const content = markdownContent.replace(/#{1,6}\s*/g, '').replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1');
+    const textLines = content.split('\n').filter(line => line.trim().length > 0);
+    
+    let yPos = 50;
+    const pageHeight = 280;
+    const lineHeight = 6;
+    
+    for (let i = 0; i < Math.min(textLines.length, 100); i++) { // Limit to prevent errors
+      const line = textLines[i].substring(0, 80); // Limit line length
+      
+      if (yPos > pageHeight) {
+        pdf.addPage();
+        yPos = 20;
+      }
+      
+      pdf.text(line, 20, yPos);
+      yPos += lineHeight;
+    }
+    
+    const fileName = `research_report_${currentTaskId || 'report'}_${new Date().toISOString().split('T')[0]}.pdf`;
+    
+    console.log('Saving fallback PDF:', fileName);
+    pdf.save(fileName);
+    
+    button.innerHTML = originalText;
+    button.disabled = false;
+    console.log('Fallback PDF generation completed successfully');
+    
+  } catch (error) {
+    console.error('Error in fallback PDF generation:', error);
+    alert(`Error generating PDF: ${error.message || 'Unknown error'}. Please try again.`);
+    button.innerHTML = originalText;
+    button.disabled = false;
+  }
+}
+
+    function extractReportContent(markdown) {
+      const lines = markdown.split('\n');
+      let startIndex = -1;
+      let endIndex = -1;
+      
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].trim().toLowerCase().startsWith('## abstract')) {
+          startIndex = i;
+          break;
+        }
+      }
+      
+      for (let i = lines.length - 1; i >= 0; i--) {
+        if (lines[i].trim().toLowerCase().startsWith('## references')) {
+          for (let j = i + 1; j < lines.length; j++) {
+            if (lines[j].trim().startsWith('##') && lines[j].trim() !== '## References') {
+              endIndex = j;
+              break;
+            }
+          }
+          if (endIndex === -1) {
+            endIndex = lines.length;
+          }
+          break;
+        }
+      }
+      
+      if (startIndex !== -1 && endIndex !== -1) {
+        const extractedLines = lines.slice(startIndex, endIndex);
+        return extractedLines.join('\n');
+      }
+      
+      return markdown;
+    }
+
+    function showKnowledgeBase() {
+      const knowledgeModal = new bootstrap.Modal(document.getElementById('knowledgeBaseModal'));
+      knowledgeModal.show();
+    }
+
+    // Settings functions removed
+
+    // Advanced options functions removed
+
+    // Notification system
+    function showNotification(message, type = 'info') {
+      const notification = document.createElement('div');
+      notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+      notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+      notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      `;
+      
+      document.body.appendChild(notification);
+      
+      // Auto-remove after 5 seconds
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 5000);
+    }
+
+    // Load saved settings on page load
+    function loadSettings() {
+      const savedSettings = localStorage.getItem('researchAgentSettings');
+      if (savedSettings) {
+        const settings = JSON.parse(savedSettings);
+        document.getElementById('researchDepth').value = settings.researchDepth || 'standard';
+        document.getElementById('enableWebSearch').checked = settings.enableWebSearch !== false;
+        document.getElementById('enableArxiv').checked = settings.enableArxiv !== false;
+        document.getElementById('enableWikipedia').checked = settings.enableWikipedia !== false;
+        document.getElementById('reportLength').value = settings.reportLength || 'standard';
+        document.getElementById('citationStyle').value = settings.citationStyle || 'apa';
+        document.getElementById('includeAbstract').checked = settings.includeAbstract !== false;
+        document.getElementById('includeReferences').checked = settings.includeReferences !== false;
+      }
+    }
+
+    // Enhanced progress tracking
+
+
+    // Update sidebar progress
+    function updateSidebarProgress(steps) {
+      if (!steps || steps.length === 0) return;
+      
+      const totalSteps = steps.length;
+      const completedSteps = steps.filter(step => step.status === 'done').length;
+      const runningSteps = steps.filter(step => step.status === 'running').length;
+      const errorSteps = steps.filter(step => step.status === 'error').length;
+      
+      const progressPercentage = Math.round((completedSteps / totalSteps) * 100);
+      
+      // Update sidebar progress bar
+      const sidebarProgressBar = document.getElementById('sidebarProgressBar');
+      if (sidebarProgressBar) {
+        sidebarProgressBar.style.width = `${progressPercentage}%`;
+      }
+      
+      // Update sidebar progress text
+      const sidebarProgressText = document.getElementById('sidebarProgressText');
+      if (sidebarProgressText) {
+        if (errorSteps > 0) {
+          sidebarProgressText.textContent = `${completedSteps}/${totalSteps} completed (${errorSteps} errors)`;
+        } else if (runningSteps > 0) {
+          sidebarProgressText.textContent = `${completedSteps}/${totalSteps} completed (${runningSteps} running)`;
+        } else if (completedSteps === totalSteps) {
+          sidebarProgressText.textContent = `${totalSteps}/${totalSteps} completed`;
+        } else {
+          sidebarProgressText.textContent = `${completedSteps}/${totalSteps} completed`;
+        }
+      }
+    }
+
+    // Enhanced export functionality removed
+
+    // Chat History Functionality
+    let currentSessionId = null;
+    let chatSessions = [];
+
+    function toggleChatHistory() {
+      const sidebar = document.getElementById('chatHistorySidebar');
+      const overlay = document.getElementById('chatHistoryOverlay');
+      
+      if (sidebar.classList.contains('open')) {
+        sidebar.classList.remove('open');
+        if (overlay) overlay.classList.remove('show');
       } else {
-        document.getElementById('finalOutput').innerHTML = `
-          <div class="alert alert-warning">
-            <h4>📄 ${data.title}</h4>
-            <p>This research is still in progress or the report is not available yet.</p>
+        sidebar.classList.add('open');
+        if (!overlay) {
+          createOverlay();
+        }
+        document.getElementById('chatHistoryOverlay').classList.add('show');
+        loadChatSessions();
+      }
+    }
+
+    function createOverlay() {
+      const overlay = document.createElement('div');
+      overlay.id = 'chatHistoryOverlay';
+      overlay.className = 'chat-history-overlay';
+      overlay.onclick = toggleChatHistory;
+      document.body.appendChild(overlay);
+    }
+
+    async function loadChatSessions() {
+      try {
+        const response = await fetch('/chat/sessions');
+        if (!response.ok) {
+          throw new Error('Failed to load chat sessions');
+        }
+        const data = await response.json();
+        chatSessions = data.sessions || [];
+        
+        // Sort sessions by creation date (most recent first)
+        chatSessions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        
+        renderChatSessions();
+      } catch (error) {
+        console.error('Error loading chat sessions:', error);
+        showNotification('Failed to load chat history. Make sure Cosmos DB is configured.', 'error');
+        renderChatSessions(); // Show empty state
+      }
+    }
+
+
+    function renderChatSessions() {
+      const container = document.getElementById('chatSessionsList');
+      if (!container) return;
+
+      if (chatSessions.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 2rem; color: var(--dewalt-gray);">
+            <i class="fas fa-history" style="font-size: 2rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+            <p>No chat history yet</p>
+            <p style="font-size: 0.8rem;">Start a new research session to see it here</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = chatSessions.map(session => {
+        const date = new Date(session.created_at).toLocaleDateString('en-US', { timeZone: 'America/New_York' });
+        const time = new Date(session.created_at).toLocaleTimeString('en-US', { timeZone: 'America/New_York' });
+        const isActive = session.id === currentSessionId;
+        
+        return `
+          <div class="chat-session-item ${isActive ? 'active' : ''}" onclick="loadChatSession('${session.id}')">
+            <div class="chat-session-prompt">${session.user_prompt || 'Research Session'}</div>
+            <div class="chat-session-meta">
+              <span class="chat-session-date">${date} ${time}</span>
+              <span class="chat-session-status ${session.status}">${session.status}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function loadChatSession(sessionId) {
+      try {
+        const response = await fetch(`/chat/session/${sessionId}`);
+        if (!response.ok) {
+          throw new Error('Failed to load chat session');
+        }
+        const data = await response.json();
+        
+        // Update current session
+        currentSessionId = sessionId;
+        
+        // Update UI to show selected session
+        document.querySelectorAll('.chat-session-item').forEach(item => {
+          item.classList.remove('active');
+        });
+        // Find the session item that was clicked
+        const sessionItems = document.querySelectorAll('.chat-session-item');
+        sessionItems.forEach(item => {
+          if (item.textContent.includes(sessionId)) {
+            item.classList.add('active');
+          }
+        });
+        
+        // Load the session data into the main interface
+        if (data.session && data.session.user_prompt) {
+          document.getElementById('promptInput').value = data.session.user_prompt;
+          
+          // Update the research topic in the sidebar
+          const sidebarTopic = document.getElementById('sidebarTopic');
+          if (sidebarTopic) {
+            sidebarTopic.textContent = `Research Topic: ${data.session.user_prompt}`;
+          }
+        }
+        
+        // Reset the research workflow section to non-started status
+        resetResearchWorkflow();
+        
+        // Clear any existing results first
+        const resultsSection = document.getElementById('researchResultsSection');
+        const resultsContent = document.getElementById('researchResultsContent');
+        
+        if (resultsSection) {
+          resultsSection.style.display = 'none';
+        }
+        
+        // Check if there's a final report in the messages and display it
+        if (data.messages && data.messages.length > 0) {
+          const finalReportMessage = data.messages.find(msg => 
+            msg.message_type === 'assistant' && 
+            msg.metadata && 
+            msg.metadata.report_type === 'final_research_report'
+          );
+          
+          if (finalReportMessage) {
+            // Display the final report in the results section
+            if (resultsSection && resultsContent) {
+              // Parse and display the markdown content
+              let parsedContent = marked.parse(finalReportMessage.content);
+              
+              // Apply the same styling as the live report
+              parsedContent = parsedContent.replace(
+                /Your next task: Writer agent/g, 
+                'Final Step - Writer agent'
+              );
+              
+              parsedContent = parsedContent.replace(
+                /Research \(Step \d+\)/g, 
+                '<span class="research-step-header">$&</span>'
+              );
+              
+              parsedContent = parsedContent.replace(
+                /Your next task: Writer agent: Generate the final comprehensive Markdown report with inline citations and a complete References section with clickable links\./g, 
+                '<span class="research-step-header">$&</span>'
+              );
+              
+              parsedContent = parsedContent.replace(
+                /Your next task:.*?\./g, 
+                '<span class="research-step-header">$&</span>'
+              );
+              
+              parsedContent = parsedContent.replace(
+                /Final Step - Writer agent:.*?\./g, 
+                '<span class="research-step-header">$&</span>'
+              );
+              
+              resultsContent.innerHTML = parsedContent;
+              resultsSection.style.display = 'block';
+              resultsSection.scrollIntoView({ behavior: 'smooth' });
+            }
+          } else {
+            // No final report found, ensure results section is hidden
+            if (resultsSection) {
+              resultsSection.style.display = 'none';
+            }
+          }
+        } else {
+          // No messages found, ensure results section is hidden
+          if (resultsSection) {
+            resultsSection.style.display = 'none';
+          }
+        }
+        
+        // Collapse the sidebar after loading session
+        toggleChatHistory();
+        
+      } catch (error) {
+        console.error('Error loading chat session:', error);
+        showNotification('Failed to load chat session', 'error');
+      }
+    }
+
+    async function createNewSession() {
+      // Clear the input field
+      document.getElementById('promptInput').value = '';
+      
+      // Reset current session ID (no backend session created yet)
+      currentSessionId = null;
+      
+      // Reset the research workflow section
+      resetResearchWorkflow();
+      
+      // Clear any existing results
+      const resultsSection = document.getElementById('researchResultsSection');
+      if (resultsSection) {
+        resultsSection.style.display = 'none';
+      }
+      
+      // Clear the research topic in sidebar
+      const sidebarTopic = document.getElementById('sidebarTopic');
+      if (sidebarTopic) {
+        sidebarTopic.textContent = 'Research Topic: No research topic selected';
+      }
+      
+      // Collapse the sidebar
+      toggleChatHistory();
+      
+      showNotification('Ready for new research session', 'success');
+    }
+
+    async function addMessageToSession(sessionId, messageType, content) {
+      try {
+        const response = await fetch(`/chat/session/${sessionId}/message`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message_type: messageType,
+            content: content
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to add message');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Error adding message:', error);
+        return null;
+      }
+    }
+
+    // Function to reset research workflow to non-started status
+    function resetResearchWorkflow() {
+      // Clear the sidebar step list
+      const sidebarStepList = document.getElementById('sidebarStepStatusList');
+      if (sidebarStepList) {
+        sidebarStepList.innerHTML = `
+          <div class="step-header step-pending" style="display: flex; align-items: center; gap: 0.5rem;">
+            <div class="step-icon" style="color: var(--dewalt-yellow); font-size: 1.2rem;">○</div>
+            <div class="step-title" style="color: var(--text-primary); font-size: 0.75rem;">Waiting for research to begin...</div>
+            <div class="step-status pending" style="background: var(--dewalt-border); color: var(--text-primary); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: bold;">READY</div>
           </div>
         `;
       }
       
-      // Update current task ID for downloads
-      currentTaskId = taskId;
-    })
-    .catch(err => {
-      console.error('Error loading history item:', err);
-      document.getElementById('finalOutput').innerHTML = `
-        <div class="alert alert-danger">
-          <h4>Error</h4>
-          <p>Could not load the selected research item.</p>
-        </div>
-      `;
-    });
-}
+      // Reset progress bar
+      const progressBar = document.getElementById('sidebarProgressBar');
+      if (progressBar) {
+        progressBar.style.width = '0%';
+      }
+      
+      // Reset progress text
+      const progressText = document.getElementById('sidebarProgressText');
+      if (progressText) {
+        progressText.textContent = '0/6 completed';
+      }
+      
+      // Clear any current task tracking
+      currentTaskId = null;
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+      
+      // Clear any rendered steps
+      if (typeof renderedSteps !== 'undefined') {
+        renderedSteps.clear();
+      }
+    }
 
-function formatDate(dateString) {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffTime = Math.abs(now - date);
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  
-  if (diffDays === 1) {
-    return 'Yesterday';
-  } else if (diffDays < 7) {
-    return `${diffDays} days ago`;
-  } else {
-    return date.toLocaleDateString();
-  }
-}
+    // Initialize settings on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      loadSettings();
+      
+      // Check if Cosmos DB is available
+      fetch('/chat/sessions')
+        .then(response => {
+          if (response.ok) {
+            console.log('Chat history available');
+          } else {
+            console.log('Chat history not available - using SQLite mode');
+          }
+        })
+        .catch(error => {
+          console.log('Chat history not available - using SQLite mode');
+        });
+    });
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
