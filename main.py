@@ -17,6 +17,7 @@ from dotenv import load_dotenv
 
 from src.planning_agent import planner_agent, executor_agent_step
 from src.cosmos_db import get_cosmos_service, CosmosDBService
+from src.content_filter import check_content_safety, is_content_safe
 
 import html, textwrap
 import markdown
@@ -108,6 +109,19 @@ def health_check(request: Request):
 
 @app.post("/generate_report")
 def generate_report(req: PromptRequest):
+    # Content safety check
+    is_safe, safety_message, safety_details = check_content_safety(req.prompt)
+    
+    if not is_safe:
+        print(f"Content blocked: {safety_message}")
+        print(f"Safety details: {safety_details}")
+        return {
+            "error": "Content blocked",
+            "message": safety_message,
+            "details": safety_details,
+            "blocked": True
+        }
+    
     task_id = str(uuid.uuid4())
     
     # Create task in database
@@ -183,6 +197,22 @@ def get_task_status(task_id: str):
 @app.post("/chat/session")
 def create_chat_session(req: PromptRequest):
     """Create a new chat session"""
+    # Content safety check
+    is_safe, safety_message, safety_details = check_content_safety(req.prompt)
+    
+    if not is_safe:
+        print(f"Content blocked in chat session: {safety_message}")
+        print(f"Safety details: {safety_details}")
+        raise HTTPException(
+            status_code=400, 
+            detail={
+                "error": "Content blocked",
+                "message": safety_message,
+                "details": safety_details,
+                "blocked": True
+            }
+        )
+    
     if not USE_COSMOS_DB or not db_service:
         raise HTTPException(status_code=503, detail="Chat history not available - using SQLite mode")
     
@@ -238,6 +268,23 @@ class MessageRequest(BaseModel):
 @app.post("/chat/session/{session_id}/message")
 def add_chat_message(session_id: str, req: MessageRequest):
     """Add a message to a chat session"""
+    # Content safety check for user messages
+    if req.message_type == "user":
+        is_safe, safety_message, safety_details = check_content_safety(req.content)
+        
+        if not is_safe:
+            print(f"Content blocked in chat message: {safety_message}")
+            print(f"Safety details: {safety_details}")
+            raise HTTPException(
+                status_code=400, 
+                detail={
+                    "error": "Content blocked",
+                    "message": safety_message,
+                    "details": safety_details,
+                    "blocked": True
+                }
+            )
+    
     if not USE_COSMOS_DB or not db_service:
         raise HTTPException(status_code=503, detail="Chat history not available - using SQLite mode")
     

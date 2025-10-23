@@ -2667,6 +2667,13 @@ const renderedSteps = new Map();
           
           // Silently refresh the chat sessions list without notification
           loadChatSessions();
+        } else {
+          // Handle content filtering errors
+          const errorData = await response.json();
+          if (errorData.detail && errorData.detail.blocked) {
+            showNotification(errorData.detail.message || 'Content contains inappropriate material. Please rephrase your question appropriately.', 'warning');
+            return;
+          }
         }
       } catch (error) {
         console.error('Error creating chat session:', error);
@@ -2696,6 +2703,23 @@ const renderedSteps = new Map();
   })
   .then(res => res.json())
   .then(data => {
+    // Check if content was blocked
+    if (data.blocked) {
+      const statusIcon = document.getElementById('statusIcon');
+      if (statusIcon) statusIcon.textContent = '🚫';
+      disableUI(false);
+      
+      // Show user-friendly message about content blocking
+      const progressText = document.getElementById('progressText');
+      const sidebarProgressText = document.getElementById('sidebarProgressText');
+      if (progressText) progressText.textContent = 'Content blocked - please rephrase your question';
+      if (sidebarProgressText) sidebarProgressText.textContent = 'Content blocked - please rephrase your question';
+      
+      // Show notification to user
+      showNotification(data.message || 'Content contains inappropriate material. Please rephrase your question appropriately.', 'warning');
+      return;
+    }
+    
     currentTaskId = data.task_id;
     // Clear sidebar step list
     const sidebarStepList = document.getElementById('sidebarStepStatusList');
@@ -3762,6 +3786,12 @@ function generateFallbackPDF(markdownContent, button, originalText, type = 'repo
         });
 
         if (!response.ok) {
+          // Handle content filtering errors
+          const errorData = await response.json();
+          if (errorData.detail && errorData.detail.blocked) {
+            showNotification(errorData.detail.message || 'Content contains inappropriate material. Please rephrase your question appropriately.', 'warning');
+            return null;
+          }
           throw new Error('Failed to add message');
         }
 

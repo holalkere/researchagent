@@ -19,3 +19,6 @@ pymupdf           # optional but recommended for faster/better PDF text extracti
 # PDF Generation
 reportlab
 markdown
+
+# Azure Content Safety (optional)
+azure-ai-contentsafety
