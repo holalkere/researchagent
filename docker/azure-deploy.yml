@@ -1,0 +1,36 @@
+# Azure Container Instances deployment configuration
+apiVersion: 2021-07-01
+location: eastus
+name: research-agent
+properties:
+  containers:
+  - name: research-agent
+    properties:
+      image: your-registry.azurecr.io/research-agent:latest
+      resources:
+        requests:
+          cpu: 1.0
+          memoryInGb: 2.0
+      ports:
+      - port: 8000
+        protocol: TCP
+      environmentVariables:
+      - name: OPENAI_API_KEY
+        secureValue: your-openai-key
+      - name: TAVILY_API_KEY
+        secureValue: your-tavily-key
+      - name: USE_COSMOS_DB
+        value: "true"
+      - name: AZURE_COSMOS_ENDPOINT
+        value: "https://your-cosmos.documents.azure.com:443/"
+      - name: AZURE_COSMOS_KEY
+        secureValue: your-cosmos-key
+  osType: Linux
+  ipAddress:
+    type: Public
+    ports:
+    - protocol: TCP
+      port: 8000
+    dnsNameLabel: research-agent-unique
+tags:
+  environment: production

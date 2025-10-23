@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  research-agent:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      # Database configuration
+      - USE_COSMOS_DB=${USE_COSMOS_DB:-false}
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///./research_agent.db}
+      
+      # Azure Cosmos DB (if using)
+      - AZURE_COSMOS_ENDPOINT=${AZURE_COSMOS_ENDPOINT}
+      - AZURE_COSMOS_KEY=${AZURE_COSMOS_KEY}
+      - AZURE_COSMOS_DATABASE_NAME=${AZURE_COSMOS_DATABASE_NAME:-research_agent}
+      
+      # API Keys
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - TAVILY_API_KEY=${TAVILY_API_KEY}
+      
+      # Azure Content Safety (optional)
+      - AZURE_CONTENT_SAFETY_ENDPOINT=${AZURE_CONTENT_SAFETY_ENDPOINT}
+      - AZURE_CONTENT_SAFETY_KEY=${AZURE_CONTENT_SAFETY_KEY}
+      
+    volumes:
+      # Mount for SQLite database persistence (if not using Cosmos DB)
+      - ./data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
