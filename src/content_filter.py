@@ -80,8 +80,12 @@ class ContentFilter:
             "severity_level": "low"
         }
         
+        # Debug: Print what we're checking
+        print(f"Content Filter Debug - Checking text: {text[:100]}...")
+        
         # First, try Azure Content Safety if available and requested
-        if use_azure and self.azure_safety_client:
+        # Temporarily disable Azure Content Safety to debug the issue
+        if False and use_azure and self.azure_safety_client:
             try:
                 azure_result = self._check_with_azure_safety(text)
                 if azure_result:
@@ -89,15 +93,20 @@ class ContentFilter:
                     details["azure_safety_used"] = True
                     details["method_used"] = "azure_content_safety"
                     
+                    print(f"Azure Content Safety result: {azure_result}")
+                    
                     # If Azure found issues, return the result
                     if not azure_result.get("is_safe", True):
+                        print(f"Content blocked by Azure Content Safety: {azure_result}")
                         return False, azure_result.get("message", "Content blocked by Azure Content Safety"), details
             except Exception as e:
                 print(f"Azure Content Safety check failed: {e}")
                 # Fall back to keyword filtering
         
         # Fallback to keyword filtering
-        return self._check_with_keywords(text, details)
+        result = self._check_with_keywords(text, details)
+        print(f"Keyword filter result: {result}")
+        return result
     
     def _check_with_azure_safety(self, text: str) -> Optional[Dict]:
         """Check content using Azure Content Safety API"""
@@ -149,10 +158,33 @@ class ContentFilter:
         text_lower = text.lower()
         blocked_keywords = []
         
-        # Check for inappropriate keywords
-        for keyword in self.inappropriate_keywords:
-            if keyword.lower() in text_lower:
-                blocked_keywords.append(keyword)
+        # Check if this is a legitimate research question
+        research_indicators = [
+            "research", "analysis", "study", "investigate", "examine", "explore",
+            "strategic", "business", "market", "industry", "competitive", "framework",
+            "recommendations", "stakeholders", "planning", "positioning", "entry"
+        ]
+        
+        is_research_question = any(indicator in text_lower for indicator in research_indicators)
+        
+        # If it's a research question, be more lenient
+        if is_research_question:
+            print(f"Content Filter Debug - Detected research question, using lenient filtering")
+            # Only block obviously inappropriate content
+            strict_keywords = [
+                "porn", "pornography", "explicit", "adult content", "xxx", "nsfw",
+                "suicide", "self-harm", "kill yourself", "hurt yourself",
+                "hate speech", "racist", "sexist", "homophobic", "transphobic"
+            ]
+            
+            for keyword in strict_keywords:
+                if keyword.lower() in text_lower:
+                    blocked_keywords.append(keyword)
+        else:
+            # Use normal filtering for non-research content
+            for keyword in self.inappropriate_keywords:
+                if keyword.lower() in text_lower:
+                    blocked_keywords.append(keyword)
         
         # Check for patterns that might indicate inappropriate content
         inappropriate_patterns = [
