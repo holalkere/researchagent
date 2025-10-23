@@ -27,13 +27,7 @@ def research_agent(
     print("Research Agent")
     print("==================================")
     
-    # Content safety check
-    is_safe, safety_message, safety_details = check_content_safety(prompt)
-    
-    if not is_safe:
-        print(f"Content blocked in research agent: {safety_message}")
-        print(f"Safety details: {safety_details}")
-        return f"[Content Blocked: {safety_message}]", []
+    # Content safety check removed - only initial user prompt is filtered
 
     full_prompt = f"""
 You are an advanced research assistant with expertise in information retrieval and academic research methodology. Your mission is to gather comprehensive, accurate, and relevant information on any topic requested by the user.
@@ -312,13 +306,7 @@ def writer_agent(
     print("Writer Agent")
     print("==================================")
     
-    # Content safety check
-    is_safe, safety_message, safety_details = check_content_safety(prompt)
-    
-    if not is_safe:
-        print(f"Content blocked in writer agent: {safety_message}")
-        print(f"Safety details: {safety_details}")
-        return f"[Content Blocked: {safety_message}]", []
+    # Content safety check removed - only initial user prompt is filtered
 
     # Get report format from advanced options
     report_format = "academic"  # default
@@ -540,13 +528,7 @@ def editor_agent(
     print("Editor Agent")
     print("==================================")
     
-    # Content safety check
-    is_safe, safety_message, safety_details = check_content_safety(prompt)
-    
-    if not is_safe:
-        print(f"Content blocked in editor agent: {safety_message}")
-        print(f"Safety details: {safety_details}")
-        return f"[Content Blocked: {safety_message}]", []
+    # Content safety check removed - only initial user prompt is filtered
 
     system_message = """
 You are a professional academic editor with expertise in improving scholarly writing across disciplines. Your task is to refine and elevate the quality of the academic text provided.
@@ -817,13 +799,7 @@ def analysis_agent(
     print("Analysis Agent")
     print("==================================")
     
-    # Content safety check
-    is_safe, safety_message, safety_details = check_content_safety(prompt)
-    
-    if not is_safe:
-        print(f"Content blocked in analysis agent: {safety_message}")
-        print(f"Safety details: {safety_details}")
-        return f"[Content Blocked: {safety_message}]", []
+    # Content safety check removed - only initial user prompt is filtered
 
     system_message = """
 You are an expert research analyst specializing in synthesizing and organizing research findings. Your task is to analyze, synthesize, or organize research materials for specific analytical purposes.
