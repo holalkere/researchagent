@@ -338,8 +338,9 @@
     .header-center {
       display: flex;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
       flex: 1;
+      margin-left: 13rem;
     }
 
     .brand-section {
@@ -1781,11 +1782,16 @@
     }
 
     .main-subtitle {
-      font-size: 0.85rem;
+      font-size: 1.1rem;
       color: var(--text-secondary);
       margin: 0;
       line-height: 1.4;
       text-align: left;
+    }
+
+    .main-subtitle .external-highlight {
+      color: var(--dewalt-yellow);
+      font-weight: 600;
     }
 
     .templates-section {
@@ -1938,6 +1944,7 @@
       display: flex;
       gap: 0.5rem;
     }
+
 
     .voice-btn, .submit-btn {
       width: 40px;
@@ -2127,7 +2134,7 @@
           </div>
           <div class="header-text">
             <h1 class="main-title">Start Your Research</h1>
-            <p class="main-subtitle">Ask any research question and get comprehensive, AI-powered insights from multiple EXTERNAL <em>only</em> sources</p>
+            <p class="main-subtitle">Ask any research question and get comprehensive, AI-powered insights from multiple <span class="external-highlight">EXTERNAL only</span> sources</p>
           </div>
         </div>
 
@@ -2188,6 +2195,7 @@
               </button>
             </div>
           </div>
+          
         </div>
       </div>
     </div> <!-- End main-content -->
@@ -2237,11 +2245,8 @@
           <button class="btn btn-success btn-sm" onclick="downloadPDF()" title="Download PDF">
             <i class="fas fa-file-pdf me-1"></i>PDF Report
           </button>
-          <button class="btn btn-outline-secondary btn-sm me-2" onclick="downloadMarkdown()">
+          <button class="btn btn-outline-secondary btn-sm" onclick="downloadMarkdown()">
             <i class="fas fa-file-alt me-1"></i>Download .md
-          </button>
-          <button class="btn btn-outline-secondary btn-sm" onclick="downloadHTML()">
-            <i class="fas fa-file-code me-1"></i>Download .html
           </button>
         </div>
       </div>
@@ -2634,8 +2639,9 @@ const renderedSteps = new Map();
       bootstrap.Modal.getInstance(document.getElementById('voiceInputModal')).hide();
     }
 
+
     // Main research submission function
-async function submitPrompt() {
+    async function submitPrompt() {
       const prompt = document.getElementById('promptInput').value.trim();
       if (!prompt) {
         alert('Please enter a research question');
@@ -2961,11 +2967,8 @@ function fetchTaskStatus() {
                 <i class="fas fa-file-pdf me-1"></i>PDF Report
               </button>
             </div>
-            <button class="btn btn-outline-secondary btn-sm me-2" onclick="downloadMarkdown()">
+            <button class="btn btn-outline-secondary btn-sm" onclick="downloadMarkdown()">
               <i class="fas fa-file-alt me-1"></i>Download .md
-            </button>
-            <button class="btn btn-outline-secondary btn-sm" onclick="downloadHTML()">
-              <i class="fas fa-file-code me-1"></i>Download .html
             </button>
           </div>
           <div id="finalReport">${marked.parse(finalReportMarkdown)}</div>
@@ -2995,14 +2998,6 @@ function downloadMarkdown() {
   link.click();
 }
 
-function downloadHTML() {
-  const htmlContent = marked.parse(finalReportMarkdown);
-  const blob = new Blob([htmlContent], { type: 'text/html' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-      link.download = `research_report_${currentTaskId}.html`;
-  link.click();
-}
 
 // Fallback function to load jsPDF from alternative CDN
 function loadJsPDFFallback() {
@@ -3067,6 +3062,25 @@ function generateServerPDF(markdownContent, button, originalText, type = 'report
   // Get the original user prompt
   const originalPrompt = document.getElementById('promptInput').value.trim();
   
+  // Generate filename from prompt keywords and date
+  const generateFilename = (prompt) => {
+    if (!prompt) return `Research_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+    
+    // Extract key words from prompt (remove common words, get meaningful terms)
+    const commonWords = ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'can', 'what', 'how', 'when', 'where', 'why', 'who', 'which', 'that', 'this', 'these', 'those'];
+    
+    const words = prompt.toLowerCase()
+      .replace(/[^\w\s]/g, ' ') // Remove punctuation
+      .split(/\s+/)
+      .filter(word => word.length > 2 && !commonWords.includes(word))
+      .slice(0, 4); // Take first 4 meaningful words
+    
+    const keywords = words.length > 0 ? words.join('_') : 'research';
+    const date = new Date().toISOString().split('T')[0];
+    
+    return `${keywords}_${date}.pdf`;
+  };
+  
   fetch('/generate_pdf', {
     method: 'POST',
     headers: {
@@ -3092,9 +3106,8 @@ function generateServerPDF(markdownContent, button, originalText, type = 'report
     const link = document.createElement('a');
     link.href = url;
     
-    // Create a more readable filename
-    const timestamp = new Date().toISOString().split('T')[0];
-    const readableFilename = `Research_Report_${timestamp}.pdf`;
+    // Create a more readable filename using prompt keywords
+    const readableFilename = generateFilename(originalPrompt);
     link.download = readableFilename;
     
     // Set attributes to ensure proper download behavior
@@ -3647,6 +3660,9 @@ function generateFallbackPDF(markdownContent, button, originalText, type = 'repo
           );
           
           if (finalReportMessage) {
+            // Set the finalReportMarkdown variable for PDF download functionality
+            finalReportMarkdown = finalReportMessage.content;
+            
             // Display the final report in the results section
             if (resultsSection && resultsContent) {
               // Parse and display the markdown content
